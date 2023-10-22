@@ -109,7 +109,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     def build_model(self):
         """Build model with trainable dictionary
 
-        The loss function is defined as (4.6) in resDMD paper.
+        The loss function is 'M' defined in scratch paper.
 
         """
         inputs_x = Input((self.target_dim,))
@@ -118,14 +118,6 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         psi_x = self.dic_func(inputs_x)
         psi_y = self.dic_func(inputs_y)
 
-        # Elements on diagonal 
-        value = 1 / tf.sqrt(tf.cast(psi_x.shape[-1], dtype='float64'))
-        # Create a weight matrix \sqrt{W}
-        sqrt_W = tf.eye(psi_x.shape[-1], dtype='float64') * value
-        # Add the weight matrix
-        psi_x = tf.matmul(sqrt_W, psi_x)
-        psi_y = tf.matmul(sqrt_W, psi_y)
-
         # Layer_K = Dense(units=psi_y.shape[-1],
         #                 use_bias=False,
         #                 name='Layer_K',
@@ -133,48 +125,26 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         # psi_next = Layer_K(psi_x)
 
         # Calculation of residual per scratch paper
-        G = tf.matmul(psi_x, psi_x, transpose_a=True)
+        G = tf.matmul(psi_x, psi_x, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(psi_x, psi_y, transpose_a=True)
+        A = tf.matmul(psi_x, psi_y, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_Y
         K = tf.matmul(xtx_inv, A)
-        L = tf.matmul(psi_y, psi_y, transpose_a=True)
-        # M = L - K^*A - A^*K + K^*GK + \muK^*K
-        M = L - tf.matmul(tf.linalg.adjoint([K]), A) - tf.matmul(tf.linalg.adjoint([A]), K) \
-                                + tf.matmul(tf.matmul(tf.linalg.adjoint([K]), G), K) + self.reg * tf.matmul(tf.linalg.adjoint([K]), K) 
+        L = tf.matmul(psi_y, psi_y, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_Y^* W \Psi_Y
         eigen_values, eigen_vectors = tf.eig(K)
+        M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
+                                + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) + self.reg * tf.matmul(tf.linalg.adjoint(K), K)
         
         resdmd_residuals = 0
         M = tf.cast(M, dtype='complex128')
         G = tf.cast(G, dtype='complex128')
-        residual_numerator = tf.matmul( tf.matmul(tf.linalg.adjoint([eigen_vectors]), M), eigen_vectors )
-        residual_denominator = tf.matmul( tf.matmul(tf.linalg.adjoint([eigen_vectors]), G), eigen_vectors )
-        resdmd_residuals = residual_numerator/residual_denominator
-        # for i, g in enumerate(eigen_vectors):
-        #     # Numerator of equation 3.2 from "Residual dynamic mode decomposition: robust and verified Koopmanism"
-        #     residual_numerator   =  \
-        #         tf.matmul( \
-        #             # This is g
-        #             tf.reshape(g, (1, psi_y.shape[-1])), \
-                    
-        #             tf.transpose( \
-        #                 tf.matmul( \
-        #                     # These are [ L - lambda x A* - lambda_bar x A + abs_lambda^2 x G ]
-        #                     (tf.cast(L, tf.complex128) \
-        #                         - tf.cast(eigen_values[i], tf.complex128) * tf.cast(tf.linalg.adjoint(A), tf.complex128)  \
-        #                         - tf.math.conj(eigen_values[i]) * tf.cast(A, tf.complex128) \
-        #                         + tf.cast(tf.math.abs(eigen_values[i]) **2, tf.complex128) * tf.cast(G, tf.complex128) ), \
-        #                     # This is g*
-        #                     tf.linalg.adjoint([g]))), transpose_b=True)
-            
-        #     # Numerator of equation 3.2 from "Residual dynamic mode decomposition: robust and verified Koopmanism"
-        #     # This is g^* G g
-        #     residual_denominator = \
-        #         tf.matmul(\
-        #             tf.matmul(tf.linalg.adjoint([g]), tf.cast(G, tf.complex128), transpose_a=True), \
-        #             tf.reshape(g, (psi_y.shape[-1], 1)))
-        #     resdmd_residuals += residual_numerator/residual_denominator
-        
+
+        residual_numerator = tf.matmul( tf.matmul(tf.linalg.adjoint(eigen_vectors), M), eigen_vectors )
+        residual_denominator = tf.matmul( tf.matmul(tf.linalg.adjoint(eigen_vectors), G), eigen_vectors )
+        # Element-wise division
+        division_result = tf.math.divide_no_nan(residual_numerator, residual_denominator)
+        # Summing all elements
+        resdmd_residuals = tf.reduce_sum(division_result)
         resdmd_residuals = resdmd_residuals / eigen_values.shape[0]
         
         model = Model(inputs=[inputs_x, inputs_y], outputs=resdmd_residuals)

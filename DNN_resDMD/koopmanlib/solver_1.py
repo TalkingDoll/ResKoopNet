@@ -109,7 +109,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     def build_model(self):
         """Build model with trainable dictionary
 
-        The loss function is defined as (4.6) in resDMD paper.
+        The loss function is (4.6) in resDMD paper.
 
         """
         inputs_x = Input((self.target_dim,))
@@ -125,19 +125,19 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         psi_next = Layer_K(psi_x)
 
         # Calculation of residuals as per ResDMD paper
-        G = tf.matmul(psi_x, psi_x, transpose_a=True)
+        G = tf.matmul(psi_x, psi_x, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(psi_x, psi_y, transpose_a=True)
+        A = tf.matmul(psi_x, psi_y, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_Y
         K = tf.matmul(xtx_inv, A)
-        L = tf.matmul(psi_y, psi_y, transpose_a=True)
+        L = tf.matmul(psi_y, psi_y, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_Y^* W \Psi_Y
 
         eigen_values, eigen_vectors = tf.eig(K)
         
         resdmd_residuals = 0
 
         for i, g in enumerate(eigen_vectors):
-            # Numerator of equation 3.2 from "Residual dynamic mode decomposition: robust and verified Koopmanism"
+            # Numerator of equation (3.2) from "Residual dynamic mode decomposition: robust and verified Koopmanism"
             residual_numerator   =  \
                 tf.matmul( \
                     # This is g

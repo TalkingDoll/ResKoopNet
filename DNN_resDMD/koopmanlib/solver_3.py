@@ -110,8 +110,8 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     def build_model(self):
         """Build model with trainable dictionary
 
-        V: truncated eigenvector matrix
-        The loss function is ||Psi(y) V - Psi(x) K V||_F^2 .
+        V: eigenvector matrix
+        The loss function is ||Psi(y) V - Psi(x) K V||_F^2 similar to original EDMD-DL.
 
         """
         inputs_x = Input((self.target_dim,))
@@ -119,14 +119,14 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
 
         psi_x = self.dic_func(inputs_x)
         psi_y = self.dic_func(inputs_y)
-
+        
         # Calculation of residuals as per ResDMD paper
-        G = tf.matmul(psi_x, psi_x, transpose_a=True)
+        G = tf.matmul(psi_x, psi_x, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         G_reg_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(psi_x, psi_y, transpose_a=True)
+        A = tf.matmul(psi_x, psi_y, transpose_a=True) * self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
         K = tf.matmul(G_reg_inv, A)
-
+        
         eigen_values, eigen_vectors = tf.linalg.eig(K)
 
         # Extract real parts of the eigenvalues

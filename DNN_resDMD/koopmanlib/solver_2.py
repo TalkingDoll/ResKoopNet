@@ -109,7 +109,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     def build_model(self):
         """Build model with trainable dictionary
 
-        The loss function is ||Psi(y) - K Psi(x)||^2 .
+        The loss function is ||Psi(y) - Psi(x)K||^2.
 
         """
         inputs_x = Input((self.target_dim,))
@@ -124,19 +124,19 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                         trainable=False)
 
         # Calculation of residuals as per ResDMD paper
-        G = tf.matmul(psi_x, psi_x, transpose_a=True)
+        G = tf.matmul(psi_x, psi_x, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(psi_x, psi_y, transpose_a=True)
+        A = tf.matmul(psi_x, psi_y, transpose_a=True) * self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
         K = tf.matmul(xtx_inv, A)
 
         eigen_values, eigen_vectors = tf.eig(K)
         
         # Matrix multiplication is only possible between same data types. So floats need to be converted to complex128 data types using tf.cast.
-        term_1 = tf.matmul(tf.cast(psi_y, tf.complex128), eigen_vectors) # Psi_Y . V
-        term_2 = tf.matmul(psi_x, K)                                     # Psi_X . K
-        term_3 = tf.matmul(tf.cast(term_2, tf.complex128), eigen_vectors) # Psi_X. K . V
-        term_4 = tf.matmul(tf.cast(K, tf.complex128), eigen_vectors)      # K . V
+        term_1 = tf.matmul(tf.cast(psi_y, tf.complex128), eigen_vectors) # Psi_Y V
+        term_2 = tf.matmul(psi_x, K)                                     # Psi_X K
+        term_3 = tf.matmul(tf.cast(term_2, tf.complex128), eigen_vectors) # Psi_X K V
+        term_4 = tf.matmul(tf.cast(K, tf.complex128), eigen_vectors)      # K V
 
         # Formula from the document
         resdmd_residuals = tf.norm(term_1 - term_3)**2 + self.reg*tf.norm(term_4)**2    # || Psi_Y . V - Psi_X. K . V ||_F + reg . ||K. V ||^2
