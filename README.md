@@ -1,2 +1,2 @@
 # resDMD
- resDMD combined with NN
+resDMD combined with DNN
