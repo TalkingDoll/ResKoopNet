@@ -1,4 +1,4 @@
-# resDMD
+# DNN-resDMD
 resDMD combined with DNN
 
 solver_0: original EDMD-DL
