@@ -1,2 +1,2 @@
-# resDMD_NN
+# resDMD
  resDMD combined with NN
