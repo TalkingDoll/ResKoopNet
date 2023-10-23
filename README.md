@@ -2,7 +2,8 @@
 resDMD combined with DNN
 
 solver_0: original EDMD-DL
-solver_1: Eqn(3.2) defined in paper "Residual dynamic mode decomposition: robust and verified Koopmanism"
+solver_1: Eqn(3.2) defined in paper "Residual dynamic mode decomposition: robust and verified Koopmanism" or (4.6) in "Rigorous data-driven computation of spectral
+properties of Koopman operators for dynamical systems"
 
 solver_2: Similar to solver_3 but coded in terms of solver_1
 
