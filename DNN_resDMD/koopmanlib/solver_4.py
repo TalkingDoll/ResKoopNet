@@ -133,7 +133,9 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         L = tf.matmul(psi_y, psi_y, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_Y^* W \Psi_Y
         eigen_values, eigen_vectors = tf.eig(K)
         M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
-                                + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) + self.reg * tf.matmul(tf.linalg.adjoint(K), K)
+                                + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) # M = L - K^*A - A^*K + K^*
+        # M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
+        #                         + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) + self.reg * tf.matmul(tf.linalg.adjoint(K), K)
         
         resdmd_residuals = 0
         M = tf.cast(M, dtype='complex128')

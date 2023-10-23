@@ -142,9 +142,10 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                         trainable=False)
         psi_next = Layer_K(psi_x)
         
-        # Added regularization term to the output
-        outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted) \
-                    + self.reg*tf.norm(tf.matmul(tf.cast(K, tf.complex128), eigen_vectors))**2 # This is \mu*||KV||^2
+        outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted)
+        # # Added regularization term to the output
+        # outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted) \
+        #             + self.reg*tf.norm(tf.matmul(tf.cast(K, tf.complex128), eigen_vectors))**2 # This is \mu*||KV||^2
         
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
         return model
