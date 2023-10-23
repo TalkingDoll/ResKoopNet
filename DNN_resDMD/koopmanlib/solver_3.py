@@ -121,10 +121,10 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         psi_y = self.dic_func(inputs_y)
         
         # Calculation of residuals as per ResDMD paper
-        G = tf.matmul(psi_x, psi_x, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
+        G = tf.matmul(psi_x, psi_x, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         G_reg_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(psi_x, psi_y, transpose_a=True) * self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
+        A = tf.matmul(psi_x, psi_y, transpose_a=True) / self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
         K = tf.matmul(G_reg_inv, A)
         
         eigen_values, eigen_vectors = tf.linalg.eig(K)
@@ -142,7 +142,10 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                         trainable=False)
         psi_next = Layer_K(psi_x)
         
-        outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted) 
+        # Added regularization term to the output
+        outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted) \
+                    + self.reg*tf.norm(tf.matmul(tf.cast(K, tf.complex128), eigen_vectors))**2 # This is lambda*||KV||^2
+        
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
         return model
 

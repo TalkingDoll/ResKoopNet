@@ -7,6 +7,6 @@ properties of Koopman operators for dynamical systems"
 
 solver_2: Similar to solver_3 but coded in terms of solver_1
 
-solver_3: Multiply eigenvector matrix $V$ after $\Psi_Y$ and $\Psi_XK$ in scratch paper
+solver_3: Multiply eigenvector matrix $V$ after $\Psi_Y$ and $\Psi_XK$ as eqn(2) in scratch paper
 
-solver_4: $J_i(K, \Psi) = \mathbf{g_i^*}\left( L - K^*A - A^*K + K^*GK +\mu K^*K \right)\mathbf{g_i}$
+solver_4: $J_i(K, \Psi) = \mathbf{g_i^*}\left( L - K^*A - A^*K + K^*GK +\mu K^*K \right)\mathbf{g_i}$, which is eqn(1) in scratch paper

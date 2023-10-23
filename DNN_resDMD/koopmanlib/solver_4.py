@@ -125,12 +125,12 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         # psi_next = Layer_K(psi_x)
 
         # Calculation of residual per scratch paper
-        G = tf.matmul(psi_x, psi_x, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
+        G = tf.matmul(psi_x, psi_x, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(psi_x, psi_y, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_Y
+        A = tf.matmul(psi_x, psi_y, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_Y
         K = tf.matmul(xtx_inv, A)
-        L = tf.matmul(psi_y, psi_y, transpose_a=True) * self.batch_size # Weighted matrix G: \Psi_Y^* W \Psi_Y
+        L = tf.matmul(psi_y, psi_y, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_Y^* W \Psi_Y
         eigen_values, eigen_vectors = tf.eig(K)
         M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
                                 + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) + self.reg * tf.matmul(tf.linalg.adjoint(K), K)
