@@ -11,4 +11,4 @@ solver_3: Multiply eigenvector matrix $V$ after $\Psi_Y$ and $\Psi_XK$ as eqn(2)
 
 solver_4: $J_i(K, \Psi) = \mathbf{g_i^*}\left( L - K^*A - A^*K + K^*GK +\mu K^*K \right)\mathbf{g_i}$, which is eqn(1) in scratch paper
 
-The entire code is modifed using the package from here: https://github.com/MLDS-NUS/KoopmanDL
+The entire code is modifed based on the package from https://github.com/MLDS-NUS/KoopmanDL
