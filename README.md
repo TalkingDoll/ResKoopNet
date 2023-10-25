@@ -1,5 +1,5 @@
 # DNN-resDMD
-resDMD combined with DNN
+In this project, will compare DNN-resDMD with kernel-resDMD.
 
 solver_0: original EDMD-DL
 
