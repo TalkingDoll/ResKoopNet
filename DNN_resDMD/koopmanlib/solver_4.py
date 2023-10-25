@@ -134,22 +134,29 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         eigen_values, eigen_vectors = tf.eig(K)
         M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
                                 + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) # M = L - K^*A - A^*K + K^*GK
-        # M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
-        #                         + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) + self.reg * tf.matmul(tf.linalg.adjoint(K), K)
         
-        resdmd_residuals = 0
-        M = tf.cast(M, dtype='complex128')
-        G = tf.cast(G, dtype='complex128')
+        M = tf.cast(M, dtype=tf.complex128)
+        G = tf.cast(G, dtype=tf.complex128)
 
-        residual_numerator = tf.matmul( tf.matmul(tf.linalg.adjoint(eigen_vectors), M), eigen_vectors )
-        residual_denominator = tf.matmul( tf.matmul(tf.linalg.adjoint(eigen_vectors), G), eigen_vectors )
-        # Element-wise division
-        division_result = tf.math.divide_no_nan(residual_numerator, residual_denominator)
-        # Summing all elements
-        resdmd_residuals = tf.reduce_sum(division_result)
-        resdmd_residuals = resdmd_residuals / eigen_values.shape[0]
+
+        # Initialize the sum
+        residual = 0
+
+        # Calculate the sum
+        N_K = eigen_vectors.shape[0]
+        for i in range(N_K):
+            g_i = eigen_vectors[:, i]  # Get the i-th eigenvector
+            g_i = tf.reshape(g_i, [-1, 1])  # Reshape to column vector
+            g_i_adj = tf.linalg.adjoint(g_i)  # Calculate the conjugate transpose
+            
+            numerator = tf.linalg.matmul(g_i_adj, tf.linalg.matmul(M, g_i))
+            denominator = tf.linalg.matmul(g_i_adj, tf.linalg.matmul(G, g_i))
+            
+            residual += numerator / denominator
+
+        residual = tf.squeeze(residual) / N_K  # Remove dimensions of size 1 from the shape and average the residual
         
-        model = Model(inputs=[inputs_x, inputs_y], outputs=resdmd_residuals)
+        model = Model(inputs=[inputs_x, inputs_y], outputs=residual)
         return model
 
     def train_psi(self, model, epochs):
