@@ -1,6 +1,10 @@
 # DNN-resDMD
 In this project, we will compare DNN-resDMD with kernel-resDMD.
 
+Inside DNN_resDMD/examples, you can run several tests with only DNN-resDMD.
+
+Inside kernel_resDMD,
+
 solver_0: original EDMD-DL
 
 solver_1: Directly optimize the loss function which is defined as eqn(3.2) defined in paper "Residual dynamic mode decomposition: robust and verified Koopmanism" or (4.6) in "Rigorous data-driven computation of spectral properties of Koopman operators for dynamical systems"(More stable)
