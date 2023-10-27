@@ -9,8 +9,8 @@ Install the environment:
 conda create --name koopman python=3.8.18
 
 3. Activate the environment:
-
-'conda activate Koopman'
+```bash
+conda activate Koopman
 
 4. Now we will install all dependancies, with following command
 
