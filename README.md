@@ -1,7 +1,7 @@
 # DNN-resDMD
 In this project, we will compare DNN-resDMD with kernel-resDMD.
 
-Install the environment:
+- Install the environment:
 
 1. Navigate to a directory containing the file.
 2. Create a new conda virtual environment(e.g., Koopman). Use following command:
@@ -21,7 +21,7 @@ conda env update --name koopman --file environment.yaml
 
 
 
-Inside DNN_resDMD/examples, you can run several tests with only DNN-resDMD. The followings are different solver scripts defining the loss function in different ways:
+- Inside DNN_resDMD/examples, you can run several tests with only DNN-resDMD. The followings are different solver scripts defining the loss function in different ways:
 
 >solver_0: original EDMD-DL
 
@@ -33,7 +33,7 @@ Inside DNN_resDMD/examples, you can run several tests with only DNN-resDMD. The 
 
 >solver_4: $J_i(K, \Psi) = \mathbf{g_i^*}\left( L - K^*A - A^*K + K^*GK +\mu K^*K \right)\mathbf{g_i}$, which is eqn(1) in scratch paper(Not bad)
 
-Inside kernel_resDMD,
+- Inside kernel_resDMD,
 
 The entire code is modifed based on the package from https://github.com/MLDS-NUS/KoopmanDL
 
