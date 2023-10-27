@@ -5,13 +5,16 @@ Install the environment:
 
 1. Navigate to a directory containing the file.
 2. Create a new conda virtual environment(I will call it Koopman). Use following command:
-```bash conda create --name koopman python=3.8.18
+
+'conda create --name koopman python=3.8.18'
 
 3. Activate the environment:
-```bash conda activate Koopman
+
+'conda activate Koopman'
 
 4. Now we will install all dependancies, with following command
-```bash conda env update --name koopman --file environment.yaml
+
+'conda env update --name koopman --file environment.yaml'
 
 
 
