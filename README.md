@@ -13,8 +13,8 @@ conda create --name koopman python=3.8.18
 conda activate Koopman
 
 4. Now we will install all dependancies, with following command
-
-'conda env update --name koopman --file environment.yaml'
+```bash
+conda env update --name koopman --file environment.yaml
 
 
 
