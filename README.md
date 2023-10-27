@@ -1,5 +1,5 @@
 # DNN-resDMD
-In this project, we will compare DNN-resDMD with kernel-resDMD.
+In this project, we will compare DNN-resDMD and kernel-resDMD.
 
 - Install the environment:
 
