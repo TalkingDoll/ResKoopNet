@@ -2,10 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import eigh
 from scipy.sparse.linalg import eigs
-from KoopPseudoSpec import KoopPseudoSpec
-from PhasePlot import PhasePlot
 import scipy.io
-import mat73
+import sys
+sys.path.append("../")
+from algorithm.KoopPseudoSpec import KoopPseudoSpec
+from algorithm.PhasePlot import PhasePlot
+# import mat73
 
 # Load data from above computation - file available from the dropbox link
 data = scipy.io.loadmat('pendulum_data.mat')
