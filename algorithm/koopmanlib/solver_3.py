@@ -1,10 +1,10 @@
+import numpy as np
+import tensorflow as tf
 from scipy.linalg import sqrtm
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import Layer, Dense
 from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
-import numpy as np
-import tensorflow as tf
 tf.keras.backend.set_floatx('float64')
 
 
