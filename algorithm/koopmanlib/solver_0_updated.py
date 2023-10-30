@@ -1,9 +1,9 @@
-import numpy as np
-import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import Layer, Dense
 from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
+import numpy as np
+import tensorflow as tf
 tf.keras.backend.set_floatx('float64')
 
 
@@ -159,7 +159,22 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         :param y:array of snapshots
         :type y: numpy array
         """
-        return self.dic_func(x), self.dic_func(y)
+        psi_x = self.dic_func(x)
+        # Calculate column norms
+        psi_x_column_norms = np.linalg.norm(psi_x, axis=0)
+        # Handle the case where norm is zero
+        psi_x_column_norms[psi_x_column_norms == 0] = 1
+        psi_x_normalized = psi_x / psi_x_column_norms
+
+        # Repeat the steps for psi_y
+        psi_y = self.dic_func(y)
+        # Calculate column norms
+        psi_y_column_norms = np.linalg.norm(psi_y, axis=0)
+        # Handle the case where norm is zero
+        psi_y_column_norms[psi_y_column_norms == 0] = 1
+        psi_y_normalized = psi_y / psi_y_column_norms
+
+        return psi_x_normalized, psi_y_normalized
 
     def build(
             self,
