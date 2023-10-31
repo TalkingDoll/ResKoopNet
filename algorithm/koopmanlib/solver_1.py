@@ -1,9 +1,9 @@
-import numpy as np
-import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import Layer, Dense
 from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
+import numpy as np
+import tensorflow as tf
 tf.keras.backend.set_floatx('float64')
 
 
@@ -26,6 +26,8 @@ class KoopmanGeneralSolver(object):
         self.dic_func = dic.call  # dictionary functions
         self.target_dim = target_dim
         self.reg = reg
+        self.psi_x = None
+        self.psi_y = None
 
     def separate_data(self, data):
         data_x = data[0]
@@ -109,39 +111,39 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     def build_model(self):
         """Build model with trainable dictionary
 
-        The loss function is (4.6) in resDMD paper.
+        The loss function is ||Psi(y) - K Psi(x)||^2 .
 
         """
         inputs_x = Input((self.target_dim,))
         inputs_y = Input((self.target_dim,))
 
-        psi_x = self.dic_func(inputs_x)
-        psi_y = self.dic_func(inputs_y)
+        self.psi_x = self.dic_func(inputs_x)
+        self.psi_y = self.dic_func(inputs_y)
 
-        Layer_K = Dense(units=psi_y.shape[-1],
+        Layer_K = Dense(units=self.psi_y.shape[-1],
                         use_bias=False,
                         name='Layer_K',
                         trainable=False)
-        psi_next = Layer_K(psi_x)
+        psi_next = Layer_K(self.psi_x)
 
         # Calculation of residuals as per ResDMD paper
-        G = tf.matmul(psi_x, psi_x, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
-        idmat = tf.eye(psi_x.shape[-1], dtype='float64')
+        G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True)
+        idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(psi_x, psi_y, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_Y
+        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True)
         K = tf.matmul(xtx_inv, A)
-        L = tf.matmul(psi_y, psi_y, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_Y^* W \Psi_Y
+        L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True)
 
         eigen_values, eigen_vectors = tf.eig(K)
         
         resdmd_residuals = 0
 
         for i, g in enumerate(eigen_vectors):
-            # Numerator of equation (3.2) from "Residual dynamic mode decomposition: robust and verified Koopmanism"
+            # Numerator of equation 3.2 from "Residual dynamic mode decomposition: robust and verified Koopmanism"
             residual_numerator   =  \
                 tf.matmul( \
                     # This is g
-                    tf.reshape(g, (1, psi_y.shape[-1])), \
+                    tf.reshape(g, (1, self.psi_y.shape[-1])), \
                     
                     tf.transpose( \
                         tf.matmul( \
@@ -154,11 +156,11 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                             tf.linalg.adjoint([g]))), transpose_b=True)
             
             # Numerator of equation 3.2 from "Residual dynamic mode decomposition: robust and verified Koopmanism"
-            # This is g^* G g
+            # This is g* x G x g
             residual_denominator = \
                 tf.matmul(\
                     tf.matmul(tf.linalg.adjoint([g]), tf.cast(G, tf.complex128), transpose_a=True), \
-                    tf.reshape(g, (psi_y.shape[-1], 1)))
+                    tf.reshape(g, (self.psi_y.shape[-1], 1)))
             resdmd_residuals += residual_numerator/residual_denominator
         
         resdmd_residuals = resdmd_residuals / eigen_values.shape[0]
@@ -187,6 +189,31 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             verbose=1)
         return history
 
+    def get_basis(self, x, y):
+        """Returns the dictionary(matrix) consisting of basis.
+
+        :param x: array of snapshots
+        :type x: numpy array
+        :param y:array of snapshots
+        :type y: numpy array
+        """
+        psi_x = self.dic_func(x)
+        # Calculate column norms
+        psi_x_column_norms = np.linalg.norm(psi_x, axis=0)
+        # Handle the case where norm is zero
+        psi_x_column_norms[psi_x_column_norms == 0] = 1
+        psi_x_normalized = psi_x / psi_x_column_norms
+
+        # Repeat the steps for psi_y
+        psi_y = self.dic_func(y)
+        # Calculate column norms
+        psi_y_column_norms = np.linalg.norm(psi_y, axis=0)
+        # Handle the case where norm is zero
+        psi_y_column_norms[psi_y_column_norms == 0] = 1
+        psi_y_normalized = psi_y / psi_y_column_norms
+
+        return psi_x_normalized, psi_y_normalized
+    
     def build(
             self,
             data_train,

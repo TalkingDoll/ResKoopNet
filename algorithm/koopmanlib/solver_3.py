@@ -1,10 +1,10 @@
-import numpy as np
-import tensorflow as tf
 from scipy.linalg import sqrtm
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import Layer, Dense
 from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
+import numpy as np
+import tensorflow as tf
 tf.keras.backend.set_floatx('float64')
 
 
@@ -27,6 +27,8 @@ class KoopmanGeneralSolver(object):
         self.dic_func = dic.call  # dictionary functions
         self.target_dim = target_dim
         self.reg = reg
+        self.psi_x = None
+        self.psi_y = None
 
     def separate_data(self, data):
         data_x = data[0]
@@ -117,14 +119,14 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         inputs_x = Input((self.target_dim,))
         inputs_y = Input((self.target_dim,))
 
-        psi_x = self.dic_func(inputs_x)
-        psi_y = self.dic_func(inputs_y)
+        self.psi_x = self.dic_func(inputs_x)
+        self.psi_y = self.dic_func(inputs_y)
         
         # Calculation of residuals as per ResDMD paper
-        G = tf.matmul(psi_x, psi_x, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
-        idmat = tf.eye(psi_x.shape[-1], dtype='float64')
+        G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
+        idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
         G_reg_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(psi_x, psi_y, transpose_a=True) / self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
+        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
         K = tf.matmul(G_reg_inv, A)
         
         eigen_values, eigen_vectors = tf.linalg.eig(K)
@@ -136,13 +138,13 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         sorted_indices = tf.argsort(eigen_values_real, direction='DESCENDING')
         eigen_vectors_sorted = tf.gather(eigen_vectors, sorted_indices, axis=1)
         
-        Layer_K = Dense(units=psi_y.shape[-1],
+        Layer_K = Dense(units=self.psi_y.shape[-1],
                         use_bias=False,
                         name='Layer_K',
                         trainable=False)
-        psi_next = Layer_K(psi_x)
+        psi_next = Layer_K(self.psi_x)
         
-        outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted)
+        outputs = tf.matmul(tf.cast(psi_next - self.psi_y, tf.complex128), eigen_vectors_sorted)
         # # Added regularization term to the output
         # outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted) \
         #             + self.reg*tf.norm(tf.matmul(tf.cast(K, tf.complex128), eigen_vectors))**2 # This is \mu*||KV||^2
@@ -171,6 +173,31 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             verbose=1)
         return history
 
+    def get_basis(self, x, y):
+        """Returns the dictionary(matrix) consisting of basis.
+
+        :param x: array of snapshots
+        :type x: numpy array
+        :param y:array of snapshots
+        :type y: numpy array
+        """
+        psi_x = self.dic_func(x)
+        # Calculate column norms
+        psi_x_column_norms = np.linalg.norm(psi_x, axis=0)
+        # Handle the case where norm is zero
+        psi_x_column_norms[psi_x_column_norms == 0] = 1
+        psi_x_normalized = psi_x / psi_x_column_norms
+
+        # Repeat the steps for psi_y
+        psi_y = self.dic_func(y)
+        # Calculate column norms
+        psi_y_column_norms = np.linalg.norm(psi_y, axis=0)
+        # Handle the case where norm is zero
+        psi_y_column_norms[psi_y_column_norms == 0] = 1
+        psi_y_normalized = psi_y / psi_y_column_norms
+
+        return psi_x_normalized, psi_y_normalized
+    
     def build(
             self,
             data_train,
