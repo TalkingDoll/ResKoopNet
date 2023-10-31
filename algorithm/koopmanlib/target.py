@@ -145,3 +145,37 @@ class VanderPolOscillator(AbstractODETarget):
         f1 = x2
         f2 = self.alpha * (1.0 - x1**2) * x2 - x1
         return tf.concat([f1, f2], axis=-1)
+
+class NonLinearPendulum(AbstractODETarget):
+    """Non-linear Pendulum example
+    """
+
+    def __init__(
+            self,
+            n_init,
+            traj_len,
+            dt=1e-3,
+            t_step=0.25,
+            dim=2,
+            seed=None,
+            delta=0.5,
+            beta=-1.0,
+            alpha=1.0):
+        super(
+            NonLinearPendulum,
+            self).__init__(
+            n_init,
+            traj_len,
+            dt,
+            t_step,
+            dim,
+            seed)
+        self.x_min = -5
+        self.x_max = 5
+
+    def rhs(self, x):
+        x1 = tf.reshape(x[:, 0], shape=(x.shape[0], 1))
+        x2 = tf.reshape(x[:, 1], shape=(x.shape[0], 1))
+        f1 = x2
+        f2 = -np.sin(x1)
+        return tf.concat([f1, f2], axis=-1)
