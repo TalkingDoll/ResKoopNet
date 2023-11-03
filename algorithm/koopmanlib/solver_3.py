@@ -129,14 +129,14 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
         K = tf.matmul(G_reg_inv, A)
         
-        eigen_values, eigen_vectors = tf.linalg.eig(K)
+        _, eigen_vectors = tf.linalg.eig(K)
 
-        # Extract real parts of the eigenvalues
-        eigen_values_real = tf.math.real(eigen_values)
+        # # Extract real parts of the eigenvalues
+        # eigen_values_real = tf.math.real(eigen_values)
 
-        # Sort eigenvalues based on their real parts
-        sorted_indices = tf.argsort(eigen_values_real, direction='DESCENDING')
-        eigen_vectors_sorted = tf.gather(eigen_vectors, sorted_indices, axis=1)
+        # # Sort eigenvalues based on their real parts
+        # sorted_indices = tf.argsort(eigen_values_real, direction='DESCENDING')
+        # eigen_vectors_sorted = tf.gather(eigen_vectors, sorted_indices, axis=1)
         
         Layer_K = Dense(units=self.psi_y.shape[-1],
                         use_bias=False,
@@ -144,7 +144,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                         trainable=False)
         psi_next = Layer_K(self.psi_x)
         
-        outputs = tf.matmul(tf.cast(psi_next - self.psi_y, tf.complex128), eigen_vectors_sorted)
+        outputs = tf.matmul(tf.cast(psi_next - self.psi_y, tf.complex128), eigen_vectors)
         # # Added regularization term to the output
         # outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted) \
         #             + self.reg*tf.norm(tf.matmul(tf.cast(K, tf.complex128), eigen_vectors))**2 # This is \mu*||KV||^2
