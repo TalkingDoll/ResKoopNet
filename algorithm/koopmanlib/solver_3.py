@@ -131,11 +131,11 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         
         _, eigen_vectors = tf.linalg.eig(K)
 
-        # # Extract real parts of the eigenvalues
-        # eigen_values_real = tf.math.real(eigen_values)
+        # # Extract absolute parts of the eigenvalues
+        # eigen_values_real = tf.math.abs(eigen_values)
 
-        # # Sort eigenvalues based on their real parts
-        # sorted_indices = tf.argsort(eigen_values_real, direction='DESCENDING')
+        # # Sort eigenvalues based on their absolute values
+        # sorted_indices = tf.argsort(eigen_values_abs, direction='DESCENDING')
         # eigen_vectors_sorted = tf.gather(eigen_vectors, sorted_indices, axis=1)
         
         Layer_K = Dense(units=self.psi_y.shape[-1],
