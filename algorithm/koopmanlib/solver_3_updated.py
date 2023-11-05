@@ -129,22 +129,30 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
         K = tf.matmul(G_reg_inv, A)
         
-        _, eigen_vectors = tf.linalg.eig(K)
+        eigen_values, eigen_vectors = tf.linalg.eig(K)
 
-        # # Extract absolute parts of the eigenvalues
-        # eigen_values_real = tf.math.abs(eigen_values)
+        # Extract real parts of the eigenvalues
+        eigen_values_abs = tf.math.real(eigen_values)
 
-        # # Sort eigenvalues based on their absolute values
-        # sorted_indices = tf.argsort(eigen_values_abs, direction='DESCENDING')
-        # eigen_vectors_sorted = tf.gather(eigen_vectors, sorted_indices, axis=1)
-        
+        # Sort eigenvalues based on their real parts
+        sorted_indices = tf.argsort(eigen_values_abs, direction='DESCENDING')
+        eigen_vectors_sorted = tf.gather(eigen_vectors, sorted_indices, axis=1)
+
+        shape = tf.shape(eigen_vectors_sorted)
+
+        # Compute the index at which to split the matrix in half
+        split_index = shape[-1] // 2
+
+        # Use tf.slice to retain only the first half of the columns
+        eigen_vectors_truncated = eigen_vectors_sorted[:, :split_index]
+       
         Layer_K = Dense(units=self.psi_y.shape[-1],
                         use_bias=False,
                         name='Layer_K',
                         trainable=False)
         psi_next = Layer_K(self.psi_x)
         
-        outputs = tf.matmul(tf.cast(psi_next - self.psi_y, tf.complex128), eigen_vectors)
+        outputs = tf.matmul(tf.cast(psi_next - self.psi_y, tf.complex128), eigen_vectors_truncated)
         # # Added regularization term to the output
         # outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted) \
         #             + self.reg*tf.norm(tf.matmul(tf.cast(K, tf.complex128), eigen_vectors))**2 # This is \mu*||KV||^2
@@ -230,14 +238,17 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         """
         # Separate training data
         self.data_train = data_train
-        self.data_x_train, self.data_y_train = self.separate_data(
-            self.data_train)
+        self.data_x_train, self.data_y_train = self.separate_data(self.data_train)
 
         self.data_valid = data_valid
         self.zeros_data_y_train = tf.zeros_like(
             self.dic_func(self.data_y_train))
+        split_index = self.zeros_data_y_train.shape[1] // 2
+
+        self.zeros_data_y_train = self.zeros_data_y_train[:, :self.zeros_data_y_train.shape[1] // 2]
         self.zeros_data_y_valid = tf.zeros_like(
             self.dic_func(self.data_valid[1]))
+        self.zeros_data_y_valid = self.zeros_data_y_valid[:, :self.zeros_data_y_valid.shape[1] // 2]
         self.batch_size = batch_size
 
         # Build the Koopman DL model
@@ -272,4 +283,4 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                         self.model.optimizer.lr = curr_lr
 
         # Compute final information
-        self.compute_final_info(reg_final=0.01)         
+        self.compute_final_info(reg_final=0.01)
