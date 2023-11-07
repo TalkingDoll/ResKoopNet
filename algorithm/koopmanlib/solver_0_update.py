@@ -1,4 +1,3 @@
-from scipy.linalg import sqrtm
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import Layer, Dense
 from tensorflow.keras.layers import Input
@@ -96,12 +95,21 @@ class KoopmanGeneralSolver(object):
     def compute_K(self, dic, data_x, data_y, reg):
         psi_x = dic(data_x)
         psi_y = dic(data_y)
+        # Compute Psi_X and Psi_Y
+        self.Psi_X = dic(data_x)
+        self.Psi_Y = dic(data_y)
         psi_xt = tf.transpose(psi_x)
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(reg * idmat + tf.matmul(psi_xt, psi_x))
         xty = tf.matmul(psi_xt, psi_y)
         self.K_reg = tf.matmul(xtx_inv, xty)
         return self.K_reg
+    
+    def get_Psi_X(self):
+        return self.Psi_X
+
+    def get_Psi_Y(self):
+        return self.Psi_Y
 
 
 class KoopmanDLSolver(KoopmanGeneralSolver):
@@ -112,8 +120,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     def build_model(self):
         """Build model with trainable dictionary
 
-        V: eigenvector matrix
-        The loss function is ||Psi(y) V - Psi(x) K V||_F^2 similar to original EDMD-DL.
+        The loss function is ||Psi(y) - K Psi(x)||^2 .
 
         """
         inputs_x = Input((self.target_dim,))
@@ -121,42 +128,14 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
 
         self.psi_x = self.dic_func(inputs_x)
         self.psi_y = self.dic_func(inputs_y)
-        
-        # Calculation of residuals as per ResDMD paper
-        G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
-        idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
-        G_reg_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
-        K = tf.matmul(G_reg_inv, A)
-        
-        eigen_values, eigen_vectors = tf.linalg.eig(K)
 
-        # Extract real parts of the eigenvalues
-        eigen_values_abs = tf.math.real(eigen_values)
-
-        # Sort eigenvalues based on their real parts
-        sorted_indices = tf.argsort(eigen_values_abs, direction='DESCENDING')
-        eigen_vectors_sorted = tf.gather(eigen_vectors, sorted_indices, axis=1)
-
-        shape = tf.shape(eigen_vectors_sorted)
-
-        # Compute the index at which to split the matrix in half
-        split_index = shape[-1] // 2
-
-        # Use tf.slice to retain only the first half of the columns
-        eigen_vectors_truncated = eigen_vectors_sorted[:, :split_index]
-       
         Layer_K = Dense(units=self.psi_y.shape[-1],
                         use_bias=False,
                         name='Layer_K',
                         trainable=False)
         psi_next = Layer_K(self.psi_x)
-        
-        outputs = tf.matmul(tf.cast(psi_next - self.psi_y, tf.complex128), eigen_vectors_truncated)
-        # # Added regularization term to the output
-        # outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted) \
-        #             + self.reg*tf.norm(tf.matmul(tf.cast(K, tf.complex128), eigen_vectors))**2 # This is \mu*||KV||^2
-        
+
+        outputs = psi_next - self.psi_y
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
         return model
 
@@ -181,31 +160,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             verbose=1)
         return history
 
-    def get_basis(self, x, y):
-        """Returns the dictionary(matrix) consisting of basis.
 
-        :param x: array of snapshots
-        :type x: numpy array
-        :param y:array of snapshots
-        :type y: numpy array
-        """
-        psi_x = self.dic_func(x)
-        # Calculate column norms
-        psi_x_column_norms = np.linalg.norm(psi_x, axis=0)
-        # Handle the case where norm is zero
-        psi_x_column_norms[psi_x_column_norms == 0] = 1
-        psi_x_normalized = psi_x / psi_x_column_norms
-
-        # Repeat the steps for psi_y
-        psi_y = self.dic_func(y)
-        # Calculate column norms
-        psi_y_column_norms = np.linalg.norm(psi_y, axis=0)
-        # Handle the case where norm is zero
-        psi_y_column_norms[psi_y_column_norms == 0] = 1
-        psi_y_normalized = psi_y / psi_y_column_norms
-
-        return psi_x_normalized, psi_y_normalized
-    
     def build(
             self,
             data_train,
@@ -238,17 +193,14 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         """
         # Separate training data
         self.data_train = data_train
-        self.data_x_train, self.data_y_train = self.separate_data(self.data_train)
+        self.data_x_train, self.data_y_train = self.separate_data(
+            self.data_train)
 
         self.data_valid = data_valid
         self.zeros_data_y_train = tf.zeros_like(
             self.dic_func(self.data_y_train))
-        split_index = self.zeros_data_y_train.shape[1] // 2
-
-        self.zeros_data_y_train = self.zeros_data_y_train[:, :self.zeros_data_y_train.shape[1] // 2]
         self.zeros_data_y_valid = tf.zeros_like(
             self.dic_func(self.data_valid[1]))
-        self.zeros_data_y_valid = self.zeros_data_y_valid[:, :self.zeros_data_y_valid.shape[1] // 2]
         self.batch_size = batch_size
 
         # Build the Koopman DL model

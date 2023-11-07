@@ -12,7 +12,7 @@ def KoopPseudoSpec(G, A, L, z_pts, parallel='off', z_pts2=None, reg_param=1e-14)
     L = (L + L.T) / 2
 
     # Compute SQ
-    eigvals, eigvecs = eigh(G + np.linalg.norm(G) * reg_param * np.eye(G.shape[0]))
+    eigvals, eigvecs = eig(G + np.linalg.norm(G) * reg_param * np.eye(G.shape[0]))
     eigvals[eigvals > 0] = np.sqrt(1.0 / eigvals[eigvals > 0])
     SQ = eigvecs @ np.diag(eigvals) @ eigvecs.T
 
@@ -21,7 +21,7 @@ def KoopPseudoSpec(G, A, L, z_pts, parallel='off', z_pts2=None, reg_param=1e-14)
     RES = np.zeros(LL)
 
     def compute_res(jj):
-        val = eigs(SQ @ (L - z_pts[jj] * A.T - np.conj(z_pts[jj]) * A + abs(z_pts[jj])**2 * G) @ SQ, k=1, which='SM')[0]
+        val = eigs(SQ @ (L - z_pts[jj] * np.conj(A.T) - np.conj(z_pts[jj]) * A + abs(z_pts[jj])**2 * G) @ SQ, k=1, which='SM')[0]
         return np.sqrt(val.real)
 
     if parallel == 'on':
@@ -40,7 +40,7 @@ def KoopPseudoSpec(G, A, L, z_pts, parallel='off', z_pts2=None, reg_param=1e-14)
         V2 = np.zeros((G.shape[0], len(z_pts2)))
 
         def compute_res2_v2(jj):
-            vals, vecs = eigs(SQ @ (L - z_pts2[jj] * A.T - np.conj(z_pts2[jj]) * A + abs(z_pts2[jj])**2 * G) @ SQ, k=1, which='SM')
+            vals, vecs = eigs(SQ @ (L - z_pts2[jj] * np.conj(A.T) - np.conj(z_pts2[jj]) * A + abs(z_pts2[jj])**2 * G) @ SQ, k=1, which='SM')
             return np.sqrt(vals.real), vecs
 
         if parallel == 'on':

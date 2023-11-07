@@ -95,12 +95,21 @@ class KoopmanGeneralSolver(object):
     def compute_K(self, dic, data_x, data_y, reg):
         psi_x = dic(data_x)
         psi_y = dic(data_y)
+        # Compute Psi_X and Psi_Y
+        self.Psi_X = dic(data_x)
+        self.Psi_Y = dic(data_y)
         psi_xt = tf.transpose(psi_x)
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(reg * idmat + tf.matmul(psi_xt, psi_x))
         xty = tf.matmul(psi_xt, psi_y)
         self.K_reg = tf.matmul(xtx_inv, xty)
         return self.K_reg
+    
+    def get_Psi_X(self):
+        return self.Psi_X
+
+    def get_Psi_Y(self):
+        return self.Psi_Y
 
 
 class KoopmanDLSolver(KoopmanGeneralSolver):
@@ -135,7 +144,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_Y
         K = tf.matmul(xtx_inv, A)
         L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_Y^* W \Psi_Y
-        eigen_values, eigen_vectors = tf.eig(K)
+        _, eigen_vectors = tf.eig(K)
         M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
                                 + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) # M = L - K^*A - A^*K + K^*GK
         
@@ -183,31 +192,6 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             batch_size=self.batch_size,
             verbose=1)
         return history
-    
-    def get_basis(self, x, y):
-        """Returns the dictionary(matrix) consisting of basis.
-
-        :param x: array of snapshots
-        :type x: numpy array
-        :param y:array of snapshots
-        :type y: numpy array
-        """
-        psi_x = self.dic_func(x)
-        # Calculate column norms
-        psi_x_column_norms = np.linalg.norm(psi_x, axis=0)
-        # Handle the case where norm is zero
-        psi_x_column_norms[psi_x_column_norms == 0] = 1
-        psi_x_normalized = psi_x / psi_x_column_norms
-
-        # Repeat the steps for psi_y
-        psi_y = self.dic_func(y)
-        # Calculate column norms
-        psi_y_column_norms = np.linalg.norm(psi_y, axis=0)
-        # Handle the case where norm is zero
-        psi_y_column_norms[psi_y_column_norms == 0] = 1
-        psi_y_normalized = psi_y / psi_y_column_norms
-
-        return psi_x_normalized, psi_y_normalized
 
     def build(
             self,

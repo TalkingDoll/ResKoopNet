@@ -95,12 +95,21 @@ class KoopmanGeneralSolver(object):
     def compute_K(self, dic, data_x, data_y, reg):
         psi_x = dic(data_x)
         psi_y = dic(data_y)
+        # Compute Psi_X and Psi_Y
+        self.Psi_X = dic(data_x)
+        self.Psi_Y = dic(data_y)
         psi_xt = tf.transpose(psi_x)
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(reg * idmat + tf.matmul(psi_xt, psi_x))
         xty = tf.matmul(psi_xt, psi_y)
         self.K_reg = tf.matmul(xtx_inv, xty)
         return self.K_reg
+    
+    def get_Psi_X(self):
+        return self.Psi_X
+
+    def get_Psi_Y(self):
+        return self.Psi_Y
 
 
 class KoopmanDLSolver(KoopmanGeneralSolver):
@@ -151,7 +160,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             verbose=1)
         return history
 
-    def get_basis(self, x, y):
+    def get_basis(self, data_x, data_y):
         """Returns the dictionary(matrix) consisting of basis.
 
         :param x: array of snapshots
@@ -159,7 +168,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         :param y:array of snapshots
         :type y: numpy array
         """
-        psi_x = self.dic_func(x)
+        psi_x = self.dic_func(data_x)
         # Calculate column norms
         psi_x_column_norms = np.linalg.norm(psi_x, axis=0)
         # Handle the case where norm is zero
@@ -167,7 +176,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         psi_x_normalized = psi_x / psi_x_column_norms
 
         # Repeat the steps for psi_y
-        psi_y = self.dic_func(y)
+        psi_y = self.dic_func(data_y)
         # Calculate column norms
         psi_y_column_norms = np.linalg.norm(psi_y, axis=0)
         # Handle the case where norm is zero
