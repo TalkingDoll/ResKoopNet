@@ -120,7 +120,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     def build_model(self):
         """Build model with trainable dictionary
 
-        The loss function is ||Psi(y) - K Psi(x)||^2 .
+        The loss function is 'M' defined in scratch paper.
 
         """
         inputs_x = Input((self.target_dim,))
@@ -129,14 +129,25 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         self.psi_x = self.dic_func(inputs_x)
         self.psi_y = self.dic_func(inputs_y)
 
-        Layer_K = Dense(units=self.psi_y.shape[-1],
-                        use_bias=False,
-                        name='Layer_K',
-                        trainable=False)
-        psi_next = Layer_K(self.psi_x)
+        # # Calculation of residual per scratch paper
+        w_temp = self.batch_size
 
-        outputs = psi_next - self.psi_y
-        model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
+        G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_X
+        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_Y
+        L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_Y^* W \Psi_Y
+        # G = (G + tf.transpose(G)) / 2  # Ensuring G is symmetric
+        # L = (L + tf.transpose(L)) / 2  # Ensuring L is symmetric
+        idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
+        xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
+        K = tf.matmul(xtx_inv, A)
+        M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
+                                + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) # M = L - K^*A - A^*K + K^*GK
+        # # Since M is supposed to be real, take the real part of M
+        M = tf.math.real(M)
+        M = (M + tf.transpose(M)) / 2  # Ensuring M is symmetric
+        M_norm = tf.norm(M)
+
+        model = Model(inputs=[inputs_x, inputs_y], outputs=M_norm)
         return model
 
     def train_psi(self, model, epochs):
@@ -159,7 +170,6 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             batch_size=self.batch_size,
             verbose=1)
         return history
-
 
     def build(
             self,
@@ -214,11 +224,11 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         losses = []
         for i in range(epochs):
             # One step for computing K
-            self.K = self.compute_K(self.dic_func,
+            self.K= self.compute_K(self.dic_func,
                                     self.data_x_train,
                                     self.data_y_train,
                                     self.reg)
-            self.model.get_layer('Layer_K').weights[0].assign(self.K)
+            # self.model.get_layer('Layer_K').weights[0].assign(self.K)
 
             # Two steps for training PsiNN
             self.history = self.train_psi(self.model, epochs=2)
