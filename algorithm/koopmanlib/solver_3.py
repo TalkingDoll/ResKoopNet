@@ -132,10 +132,11 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         self.psi_y = self.dic_func(inputs_y)
         
         # Calculation of residuals as per ResDMD paper
-        G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True) / self.batch_size # Weighted matrix G: \Psi_X^* W \Psi_X
+        w_temp = self.batch_size
+        G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_X
         idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
         G_reg_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / self.batch_size # Weighted matrix A: \Psi_X^* W \Psi_Y
+        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / w_temp # Weighted matrix A: \Psi_X^* W \Psi_Y
         K = tf.matmul(G_reg_inv, A)
         
         _, eigen_vectors = tf.linalg.eig(K)
