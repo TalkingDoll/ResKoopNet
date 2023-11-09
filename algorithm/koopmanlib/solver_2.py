@@ -146,9 +146,9 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         term_3 = tf.matmul(tf.cast(term_2, tf.complex128), eigen_vectors) # Psi_X K V
 
         # Formula from the document
-        resdmd_residuals = term_1 - term_3     # Psi_Y V - Psi_X K V 
+        residual = term_1 - term_3     # Psi_Y V - Psi_X K V 
 
-        model = Model(inputs=[inputs_x, inputs_y], outputs=resdmd_residuals)
+        model = Model(inputs=[inputs_x, inputs_y], outputs=residual)
         return model
 
     def train_psi(self, model, epochs):
