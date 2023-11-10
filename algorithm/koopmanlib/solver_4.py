@@ -128,13 +128,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
 
         self.psi_x = self.dic_func(inputs_x)
         self.psi_y = self.dic_func(inputs_y)
-
-        # Layer_K = Dense(units=psi_y.shape[-1],
-        #                 use_bias=False,
-        #                 name='Layer_K',
-        #                 trainable=False)
-        # psi_next = Layer_K(psi_x)
-
+        
         # Calculation of residual per scratch paper
         w_temp = self.batch_size
         # w_temp = 0.000524472897093474
