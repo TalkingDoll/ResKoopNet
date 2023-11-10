@@ -141,7 +141,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
                                 + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) # M = L - K^*A - A^*K + K^*GK
         # # Since M is supposed to be real, take the real part of M
-        M = tf.math.real(M)
+        M = tf.math.real(M) # Ensuring M is real
         M = (M + tf.transpose(M)) / 2  # Ensuring M is symmetric
         M_norm = tf.norm(M)
 
