@@ -134,9 +134,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
 
         G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_X
         A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_Y
-        L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_Y^* W \Psi_Y
-        # G = (G + tf.transpose(G)) / 2  # Ensuring G is symmetric
-        # L = (L + tf.transpose(L)) / 2  # Ensuring L is symmetric
+        L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_Y^* W \Psi_Y        
         idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
         K = tf.matmul(xtx_inv, A)
