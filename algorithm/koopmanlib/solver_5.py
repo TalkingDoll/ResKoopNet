@@ -143,7 +143,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         # # Since M is supposed to be real, take the real part of M
         M = tf.math.real(M) # Ensuring M is real
         M = (M + tf.transpose(M)) / 2  # Ensuring M is symmetric
-        M_norm = tf.norm(M)
+        M_norm = tf.norm(M)**2 + self.reg*(tf.norm(G - idmat))**2
 
         model = Model(inputs=[inputs_x, inputs_y], outputs=M_norm)
         return model

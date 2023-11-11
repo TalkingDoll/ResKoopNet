@@ -5,13 +5,10 @@ sys.path.append("../")
 from algorithm.koopmanlib.dictionary import PsiNN
 
 # %%
-basis_function = PsiNN(layer_sizes=[100,100,100], n_psi_train=15)
-
-# %%
 data_path = r'D:\Residual-Dynamic-Mode-Decomposition-main\Examples_gallery_1\ResDMD_datasets' 
 import scipy.io
 # temp = scipy.io.loadmat(data_path+'pendulum_data.mat')
-temp = scipy.io.loadmat(data_path + '\\data_pendulum.mat')
+temp = scipy.io.loadmat(data_path + '\\data_pendulum_100.mat')
 X = temp['DATA_X']
 Y = temp['DATA_Y']
 print(X.shape)
@@ -44,31 +41,33 @@ def connector_pendulum(n_psi_train, solver_index):
                              reg=0.1)
     solver.build(data_train=data_train, 
                  data_valid=data_valid, 
-                 epochs=100, 
-                 batch_size=50000, 
+                 epochs=1000, 
+                 batch_size=100000, 
                  lr=1e-4, 
                  log_interval=10, 
                  lr_decay_factor=.8)
 
     # Results from solver
     evalues = solver.eigenvalues
+    efuns = solver.eigenfunctions(X)
     N_dict = np.shape(evalues)[0]
     Koopman_matrix_K = solver.K.numpy()
     Psi_X = solver.get_Psi_X().numpy()
     Psi_Y = solver.get_Psi_Y().numpy()
 
-    # SVD on Psi_X and Psi_Y
-    Psi_X_U, _, _ = np.linalg.svd(Psi_X/np.sqrt(Psi_X.shape[0]), full_matrices=False)
-    Psi_Y_U, _, _ = np.linalg.svd(Psi_Y/np.sqrt(Psi_Y.shape[0]), full_matrices=False)
+    # # SVD on Psi_X and Psi_Y
+    # Psi_X_U, _, _ = np.linalg.svd(Psi_X/np.sqrt(Psi_X.shape[0]), full_matrices=False)
+    # Psi_Y_U, _, _ = np.linalg.svd(Psi_Y/np.sqrt(Psi_Y.shape[0]), full_matrices=False)
 
     # Prepare data to save
     resDMD_DL_outputs = {
         'evalues': evalues,
+        'efuns': efuns,
         'N_dict': N_dict,
         'Psi_X': Psi_X,
         'Psi_Y': Psi_Y,
-        'Psi_X_U': Psi_X_U,
-        'Psi_Y_U': Psi_Y_U,
+        # 'Psi_X_U': Psi_X_U,
+        # 'Psi_Y_U': Psi_Y_U,
         'K': Koopman_matrix_K,
     }
 

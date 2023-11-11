@@ -144,11 +144,15 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         term_1 = tf.matmul(tf.cast(self.psi_y, tf.complex128), eigen_vectors) # Psi_Y V
         term_2 = tf.matmul(self.psi_x, K)                                     # Psi_X K
         term_3 = tf.matmul(tf.cast(term_2, tf.complex128), eigen_vectors) # Psi_X K V
+        term_4 = (tf.norm(G - idmat))**2    
 
-        # Formula from the document
-        residual = term_1 - term_3     # Psi_Y V - Psi_X K V 
+        # Perform the addition, now both terms are real numbers (float64)
+        residual = tf.cast(tf.norm(term_1 - term_3)**2, tf.float64) + self.reg*term_4
 
+        # Continue with the model definition
         model = Model(inputs=[inputs_x, inputs_y], outputs=residual)
+
+
         return model
 
     def train_psi(self, model, epochs):

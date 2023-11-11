@@ -159,9 +159,9 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             numerator = tf.linalg.matmul(g_i_adj, tf.linalg.matmul(M, g_i))
             denominator = tf.linalg.matmul(g_i_adj, tf.linalg.matmul(G, g_i))
             
-            residual += numerator / denominator
+            residual += numerator/denominator
 
-        residual = tf.squeeze(residual) / N_K  # Remove dimensions of size 1 from the shape and average the residual
+        residual = tf.squeeze(residual)/N_K + 0.1*(tf.norm(G - tf.eye(G.shape[0])))**2  # Remove dimensions of size 1 from the shape and average the residual
         
         model = Model(inputs=[inputs_x, inputs_y], outputs=residual)
         return model
