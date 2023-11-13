@@ -41,8 +41,8 @@ def connector_pendulum(n_psi_train, solver_index):
                              reg=0.1)
     solver.build(data_train=data_train, 
                  data_valid=data_valid, 
-                 epochs=1000, 
-                 batch_size=100000, 
+                 epochs=500, 
+                 batch_size=30000, 
                  lr=1e-4, 
                  log_interval=10, 
                  lr_decay_factor=.8)

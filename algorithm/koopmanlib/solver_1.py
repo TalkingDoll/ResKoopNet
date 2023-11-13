@@ -172,7 +172,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                     tf.reshape(g, (self.psi_y.shape[-1], 1)))
             resdmd_residuals += residual_numerator/residual_denominator
         
-        resdmd_residuals = resdmd_residuals/eigen_vectors.shape[0] + 0.1*(tf.norm(G - tf.eye(G.shape[0])))**2
+        resdmd_residuals = resdmd_residuals/eigen_vectors.shape[0] + self.reg*(tf.norm(G - idmat))**2
         
         model = Model(inputs=[inputs_x, inputs_y], outputs=resdmd_residuals)
         return model
