@@ -117,26 +117,6 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     Build the Koopman model with dictionary learning
     '''
 
-    def custom_loss(self, outputs):
-        # outputs is the norm squared of M
-        # This is already a measure of error, so we use it directly
-        error_loss = outputs
-
-        # Calculate G for the regularization term
-        psi_x_transpose = tf.transpose(self.psi_x)
-        G = tf.matmul(psi_x_transpose, self.psi_x)
-
-        # Identity matrix of the appropriate size
-        I = tf.eye(G.shape[0], dtype=tf.float64)
-
-        # Regularization term: Frobenius norm of (G - I)
-        reg_loss = tf.norm(G - I, ord='fro', axis=[-2, -1])
-
-        # Combine losses
-        combined_loss = error_loss + 0.5 * reg_loss
-
-        return combined_loss
-    
     def build_model(self):
         """Build model with trainable dictionary
 
@@ -166,15 +146,12 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         term_3 = tf.matmul(tf.cast(term_2, tf.complex128), eigen_vectors) # Psi_X K V
 
         # Perform the addition, now both terms are real numbers (float64)
-        outputs = tf.cast(tf.norm(term_1 - term_3)**2, tf.float64)
+        outputs = tf.cast(tf.norm(term_1 - term_3)**2, tf.float64) + 0.5*(tf.norm(G - idmat))**2
 
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
-
         # Compile the model with the custom loss function
         opt = Adam(learning_rate=0.001)  # Adjust learning rate as needed
-        model.compile(optimizer=opt, loss=self.custom_loss)
-
-
+        model.compile(optimizer=opt, loss=tf.keras.losses.MeanSquaredError())
         return model
 
     def train_psi(self, model, epochs):

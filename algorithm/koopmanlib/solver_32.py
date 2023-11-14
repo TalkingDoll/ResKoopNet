@@ -1,3 +1,4 @@
+from scipy.linalg import sqrtm
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import Layer, Dense
 from tensorflow.keras.layers import Input
@@ -117,30 +118,11 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     Build the Koopman model with dictionary learning
     '''
 
-    def custom_loss(self, outputs):
-        # Since outputs is the error term (psi_next - self.psi_y)
-        mse_loss = tf.reduce_mean(tf.square(outputs))
-
-        # Calculate G
-        psi_x_transpose = tf.transpose(self.psi_x)
-        G = tf.matmul(psi_x_transpose, self.psi_x)
-
-        # Identity matrix of the appropriate size
-        I = tf.eye(G.shape[0], dtype=tf.float64)
-
-        # Regularization term: Frobenius norm of (G - I)
-        reg_loss = tf.norm(G - I, ord='fro', axis=[-2, -1])
-
-        # Combine losses
-        combined_loss = mse_loss + 0.5 * reg_loss
-
-        return combined_loss
-
-    
     def build_model(self):
         """Build model with trainable dictionary
 
-        The loss function is ||Psi(y) - K Psi(x)||^2 .
+        V: eigenvector matrix
+        The loss function is ||Psi(y) V - Psi(x) K V||_F^2 similar to original EDMD-DL.
 
         """
         inputs_x = Input((self.target_dim,))
@@ -148,20 +130,39 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
 
         self.psi_x = self.dic_func(inputs_x)
         self.psi_y = self.dic_func(inputs_y)
+        
+        # Calculation of residuals as per ResDMD paper
+        w_temp = self.batch_size
+        G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_X
+        idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
+        G_reg_inv = tf.linalg.pinv(self.reg * idmat + G)
+        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / w_temp # Weighted matrix A: \Psi_X^* W \Psi_Y
+        K = tf.matmul(G_reg_inv, A)
+        
+        _, eigen_vectors = tf.linalg.eig(K)
 
+        # # Extract absolute parts of the eigenvalues
+        # eigen_values_real = tf.math.abs(eigen_values)
+
+        # # Sort eigenvalues based on their absolute values
+        # sorted_indices = tf.argsort(eigen_values_abs, direction='DESCENDING')
+        # eigen_vectors_sorted = tf.gather(eigen_vectors, sorted_indices, axis=1)
+        
         Layer_K = Dense(units=self.psi_y.shape[-1],
                         use_bias=False,
                         name='Layer_K',
                         trainable=False)
         psi_next = Layer_K(self.psi_x)
-
-        outputs = psi_next - self.psi_y
+        
+        outputs = tf.matmul(tf.cast(psi_next - self.psi_y, tf.complex128), eigen_vectors) + 0.5*(tf.norm(G - idmat))**2
+        # # Added regularization term to the output
+        # outputs = tf.matmul(tf.cast(psi_next - psi_y, tf.complex128), eigen_vectors_sorted) \
+        #             + self.reg*tf.norm(tf.matmul(tf.cast(K, tf.complex128), eigen_vectors))**2 # This is \mu*||KV||^2
+        
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
-
         # Compile the model with the custom loss function
         opt = Adam(learning_rate=0.001)  # Adjust learning rate as needed
-        model.compile(optimizer=opt, loss=self.custom_loss)
-
+        model.compile(optimizer=opt, loss=tf.keras.losses.MeanSquaredError())
         return model
 
     def train_psi(self, model, epochs):
@@ -184,31 +185,6 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             batch_size=self.batch_size,
             verbose=1)
         return history
-
-    def get_basis(self, data_x, data_y):
-        """Returns the dictionary(matrix) consisting of basis.
-
-        :param x: array of snapshots
-        :type x: numpy array
-        :param y:array of snapshots
-        :type y: numpy array
-        """
-        psi_x = self.dic_func(data_x)
-        # Calculate column norms
-        psi_x_column_norms = np.linalg.norm(psi_x, axis=0)
-        # Handle the case where norm is zero
-        psi_x_column_norms[psi_x_column_norms == 0] = 1
-        psi_x_normalized = psi_x / psi_x_column_norms
-
-        # Repeat the steps for psi_y
-        psi_y = self.dic_func(data_y)
-        # Calculate column norms
-        psi_y_column_norms = np.linalg.norm(psi_y, axis=0)
-        # Handle the case where norm is zero
-        psi_y_column_norms[psi_y_column_norms == 0] = 1
-        psi_y_normalized = psi_y / psi_y_column_norms
-
-        return psi_x_normalized, psi_y_normalized
 
     def build(
             self,
@@ -255,9 +231,9 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         # Build the Koopman DL model
         self.model = self.build_model()
 
-        # # Compile the Koopman DL model
-        # opt = Adam(lr)
-        # self.model.compile(optimizer=opt, loss='mse')
+        # Compile the Koopman DL model
+        opt = Adam(lr)
+        self.model.compile(optimizer=opt, loss='mse')
 
         # Training Loop
         losses = []
@@ -284,4 +260,4 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                         self.model.optimizer.lr = curr_lr
 
         # Compute final information
-        self.compute_final_info(reg_final=0.01)
+        self.compute_final_info(reg_final=0.01)         

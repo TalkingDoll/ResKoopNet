@@ -116,7 +116,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     '''
     Build the Koopman model with dictionary learning
     '''
-    
+
     def build_model(self):
         """Build model with trainable dictionary
 
@@ -128,23 +128,41 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
 
         self.psi_x = self.dic_func(inputs_x)
         self.psi_y = self.dic_func(inputs_y)
-
-        # # Calculation of residual per scratch paper
+        
+        # Calculation of residual per scratch paper
         w_temp = self.batch_size
-
+        # w_temp = 0.000524472897093474
         G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_X
-        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_Y
-        L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_Y^* W \Psi_Y        
         idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
+        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_Y
         K = tf.matmul(xtx_inv, A)
+        L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_Y^* W \Psi_Y
+        _, eigen_vectors = tf.eig(K)
         M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
                                 + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) # M = L - K^*A - A^*K + K^*GK
-        # # Since M is supposed to be real, take the real part of M
-        M = tf.math.real(M) # Ensuring M is real
-        M = (M + tf.transpose(M)) / 2  # Ensuring M is symmetric
-        outputs = tf.norm(M)**2 + 0.5*(tf.norm(G - idmat))**2
+        
+        M = tf.cast(M, dtype=tf.complex128)
+        G = tf.cast(G, dtype=tf.complex128)
 
+
+        # Initialize the sum
+        residual = 0
+
+        # Calculate the sum
+        N_K = eigen_vectors.shape[0]
+        for i in range(N_K):
+            g_i = eigen_vectors[:, i]  # Get the i-th eigenvector
+            g_i = tf.reshape(g_i, [-1, 1])  # Reshape to column vector
+            g_i_adj = tf.linalg.adjoint(g_i)  # Calculate the conjugate transpose
+            
+            numerator = tf.linalg.matmul(g_i_adj, tf.linalg.matmul(M, g_i))
+            denominator = tf.linalg.matmul(g_i_adj, tf.linalg.matmul(G, g_i))
+            
+            residual += numerator/denominator
+
+        outputs = tf.squeeze(residual)/N_K + 0.5*(tf.norm(G - idmat))**2  # Remove dimensions of size 1 from the shape and average the residual
+        
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
         # Compile the model with the custom loss function
         opt = Adam(learning_rate=0.001)  # Adjust learning rate as needed
@@ -217,9 +235,9 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         # Build the Koopman DL model
         self.model = self.build_model()
 
-        # # Compile the Koopman DL model
-        # opt = Adam(lr)
-        # self.model.compile(optimizer=opt, loss='mse')
+        # Compile the Koopman DL model
+        opt = Adam(lr)
+        self.model.compile(optimizer=opt, loss='mse')
 
         # Training Loop
         losses = []
