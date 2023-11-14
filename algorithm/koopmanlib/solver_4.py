@@ -161,7 +161,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             
             residual += numerator/denominator
 
-        residual = tf.squeeze(residual)/N_K + self.reg*(tf.norm(G - idmat))**2  # Remove dimensions of size 1 from the shape and average the residual
+        residual = tf.squeeze(residual)/N_K  # Remove dimensions of size 1 from the shape and average the residual
         
         model = Model(inputs=[inputs_x, inputs_y], outputs=residual)
         return model

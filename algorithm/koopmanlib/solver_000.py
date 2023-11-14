@@ -117,6 +117,26 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     Build the Koopman model with dictionary learning
     '''
 
+    def custom_loss(self, outputs):
+        # Since outputs is the error term (psi_next - self.psi_y)
+        mse_loss = tf.reduce_mean(tf.square(outputs))
+
+        # Calculate G
+        psi_x_transpose = tf.transpose(self.psi_x)
+        G = tf.matmul(psi_x_transpose, self.psi_x)
+
+        # Identity matrix of the appropriate size
+        I = tf.eye(G.shape[0], dtype=tf.float64)
+
+        # Regularization term: Frobenius norm of (G - I)
+        reg_loss = tf.norm(G - I, ord='fro', axis=[-2, -1])
+
+        # Combine losses
+        combined_loss = mse_loss + 0.5 * reg_loss
+
+        return combined_loss
+
+    
     def build_model(self):
         """Build model with trainable dictionary
 
@@ -135,46 +155,13 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                         trainable=False)
         psi_next = Layer_K(self.psi_x)
 
-        # Calculation of residuals as per ResDMD paper
-        G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True)
-        idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
-        xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
-        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True)
-        K = tf.matmul(xtx_inv, A)
-        L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True)
+        outputs = psi_next - self.psi_y
+        model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
 
-        eigen_values, eigen_vectors = tf.eig(K)
-        
-        resdmd_residuals = 0
+        # Compile the model with the custom loss function
+        opt = Adam(learning_rate=0.001)  # Adjust learning rate as needed
+        model.compile(optimizer=opt, loss=self.custom_loss)
 
-        for i, g in enumerate(eigen_vectors):
-            # Numerator of equation 3.2 from "Residual dynamic mode decomposition: robust and verified Koopmanism"
-            residual_numerator   =  \
-                tf.matmul( \
-                    # This is g
-                    tf.reshape(g, (1, self.psi_y.shape[-1])), \
-                    
-                    tf.transpose( \
-                        tf.matmul( \
-                            # These are [ L - lambda x A* - lambda_bar x A + abs_lambda^2 x G ]
-                            (tf.cast(L, tf.complex128) \
-                                - tf.cast(eigen_values[i], tf.complex128) * tf.cast(tf.linalg.adjoint(A), tf.complex128)  \
-                                - tf.math.conj(eigen_values[i]) * tf.cast(A, tf.complex128) \
-                                + tf.cast(tf.math.abs(eigen_values[i]) **2, tf.complex128) * tf.cast(G, tf.complex128) ), \
-                            # This is g*
-                            tf.linalg.adjoint([g]))), transpose_b=True)
-            
-            # Numerator of equation 3.2 from "Residual dynamic mode decomposition: robust and verified Koopmanism"
-            # This is g* x G x g
-            residual_denominator = \
-                tf.matmul(\
-                    tf.matmul(tf.linalg.adjoint([g]), tf.cast(G, tf.complex128), transpose_a=True), \
-                    tf.reshape(g, (self.psi_y.shape[-1], 1)))
-            resdmd_residuals += residual_numerator/residual_denominator
-        
-        resdmd_residuals = resdmd_residuals/eigen_vectors.shape[0]
-        
-        model = Model(inputs=[inputs_x, inputs_y], outputs=resdmd_residuals)
         return model
 
     def train_psi(self, model, epochs):
@@ -197,7 +184,32 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             batch_size=self.batch_size,
             verbose=1)
         return history
-    
+
+    def get_basis(self, data_x, data_y):
+        """Returns the dictionary(matrix) consisting of basis.
+
+        :param x: array of snapshots
+        :type x: numpy array
+        :param y:array of snapshots
+        :type y: numpy array
+        """
+        psi_x = self.dic_func(data_x)
+        # Calculate column norms
+        psi_x_column_norms = np.linalg.norm(psi_x, axis=0)
+        # Handle the case where norm is zero
+        psi_x_column_norms[psi_x_column_norms == 0] = 1
+        psi_x_normalized = psi_x / psi_x_column_norms
+
+        # Repeat the steps for psi_y
+        psi_y = self.dic_func(data_y)
+        # Calculate column norms
+        psi_y_column_norms = np.linalg.norm(psi_y, axis=0)
+        # Handle the case where norm is zero
+        psi_y_column_norms[psi_y_column_norms == 0] = 1
+        psi_y_normalized = psi_y / psi_y_column_norms
+
+        return psi_x_normalized, psi_y_normalized
+
     def build(
             self,
             data_train,
@@ -243,19 +255,19 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         # Build the Koopman DL model
         self.model = self.build_model()
 
-        # Compile the Koopman DL model
-        opt = Adam(lr)
-        self.model.compile(optimizer=opt, loss='mse')
+        # # Compile the Koopman DL model
+        # opt = Adam(lr)
+        # self.model.compile(optimizer=opt, loss='mse')
 
         # Training Loop
         losses = []
         for i in range(epochs):
             # One step for computing K
-            self.K= self.compute_K(self.dic_func,
+            self.K = self.compute_K(self.dic_func,
                                     self.data_x_train,
                                     self.data_y_train,
                                     self.reg)
-            # self.model.get_layer('Layer_K').weights[0].assign(self.K)
+            self.model.get_layer('Layer_K').weights[0].assign(self.K)
 
             # Two steps for training PsiNN
             self.history = self.train_psi(self.model, epochs=2)
