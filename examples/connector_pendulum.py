@@ -5,10 +5,10 @@ sys.path.append("../")
 from algorithm.koopmanlib.dictionary import PsiNN
 
 # %%
-data_path = r'D:\Residual-Dynamic-Mode-Decomposition-main\Examples_gallery_1\ResDMD_datasets' 
+data_path = r'D:\\resDMD_data' 
 import scipy.io
 # temp = scipy.io.loadmat(data_path+'pendulum_data.mat')
-temp = scipy.io.loadmat(data_path + '\\data_pendulum_100.mat')
+temp = scipy.io.loadmat(data_path + '\\data_pendulum_1000_ui.mat')
 X = temp['DATA_X']
 Y = temp['DATA_Y']
 print(X.shape)
@@ -42,7 +42,7 @@ def connector_pendulum(n_psi_train, solver_index):
     solver.build(data_train=data_train, 
                  data_valid=data_valid, 
                  epochs=3000, 
-                 batch_size=45000, 
+                 batch_size=5000, 
                  lr=1e-4, 
                  log_interval=10, 
                  lr_decay_factor=.8)
@@ -72,8 +72,8 @@ def connector_pendulum(n_psi_train, solver_index):
     }
 
     # Saving the file
-    save_path = 'D:\\Residual-Dynamic-Mode-Decomposition-main\\Examples_gallery_1\\ResDMD_datasets\\basis_M1_100'
-    filename = f'solver{solver_index}_outputs_{N_dict}basis.mat'
+    save_path = 'D:\\Residual-Dynamic-Mode-Decomposition-main\\Examples_gallery_1\\ResDMD_datasets\\basis_i'
+    filename = f'solver{solver_index}_outputs_{N_dict}basis_ui.mat'
     full_path = os.path.join(save_path, filename)
     scipy.io.savemat(full_path, resDMD_DL_outputs)
 
