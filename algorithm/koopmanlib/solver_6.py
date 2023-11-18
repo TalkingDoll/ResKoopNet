@@ -120,7 +120,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
     def build_model(self):
         """Build model with trainable dictionary
 
-        The loss function is 'M' defined in scratch paper.
+        The loss function is ||Psi(y) - K Psi(x)||^2 .
 
         """
         inputs_x = Input((self.target_dim,))
@@ -129,30 +129,18 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         self.psi_x = self.dic_func(inputs_x)
         self.psi_y = self.dic_func(inputs_y)
 
-        # # Calculation of residual per scratch paper
-        w_temp = self.batch_size
+        Layer_K = Dense(units=self.psi_y.shape[-1],
+                        use_bias=False,
+                        name='Layer_K',
+                        trainable=False)
+        psi_next = Layer_K(self.psi_x)
 
-        G = tf.matmul(self.psi_x, self.psi_x, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_X
-        A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_X^* W \Psi_Y
-        L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True) / w_temp # Weighted matrix G: \Psi_Y^* W \Psi_Y        
-        idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
-        xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
-        K = tf.matmul(xtx_inv, A)
-        M = L - tf.matmul(tf.linalg.adjoint(K), A) - tf.matmul(tf.linalg.adjoint(A), K) \
-                                + tf.matmul(tf.matmul(tf.linalg.adjoint(K), G), K) # M = L - K^*A - A^*K + K^*GK
-        # # Since M is supposed to be real, take the real part of M
-        M = tf.math.real(M) # Ensuring M is real
-        M = (M + tf.transpose(M)) / 2  # Ensuring M is symmetric
-        # Compute singular values
-        s = tf.linalg.svd(M, compute_uv=False)
+        # Subtract and cast to complex for multiplication with eigenvectors
+        psi_diff = tf.cast(psi_next - self.psi_y, tf.complex128)
+        outputs = tf.matmul(psi_diff, self.eigenvectors)
 
-        # The operator norm is the largest singular value
-        M_op_norm = tf.reduce_max(s)
-
-        # Square of the operator norm
-        M_norm = M_op_norm**2
-
-        model = Model(inputs=[inputs_x, inputs_y], outputs=M_norm)
+        # Create the Keras model
+        model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
         return model
 
     def train_psi(self, model, epochs):
@@ -175,6 +163,31 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             batch_size=self.batch_size,
             verbose=1)
         return history
+
+    def get_basis(self, data_x, data_y):
+        """Returns the dictionary(matrix) consisting of basis.
+
+        :param x: array of snapshots
+        :type x: numpy array
+        :param y:array of snapshots
+        :type y: numpy array
+        """
+        psi_x = self.dic_func(data_x)
+        # Calculate column norms
+        psi_x_column_norms = np.linalg.norm(psi_x, axis=0)
+        # Handle the case where norm is zero
+        psi_x_column_norms[psi_x_column_norms == 0] = 1
+        psi_x_normalized = psi_x / psi_x_column_norms
+
+        # Repeat the steps for psi_y
+        psi_y = self.dic_func(data_y)
+        # Calculate column norms
+        psi_y_column_norms = np.linalg.norm(psi_y, axis=0)
+        # Handle the case where norm is zero
+        psi_y_column_norms[psi_y_column_norms == 0] = 1
+        psi_y_normalized = psi_y / psi_y_column_norms
+
+        return psi_x_normalized, psi_y_normalized
 
     def build(
             self,
@@ -218,6 +231,9 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
             self.dic_func(self.data_valid[1]))
         self.batch_size = batch_size
 
+        # Ensure the final information is computed before building the model
+        self.compute_final_info(reg_final=0.01)
+        
         # Build the Koopman DL model
         self.model = self.build_model()
 
@@ -229,11 +245,11 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         losses = []
         for i in range(epochs):
             # One step for computing K
-            self.K= self.compute_K(self.dic_func,
+            self.K = self.compute_K(self.dic_func,
                                     self.data_x_train,
                                     self.data_y_train,
                                     self.reg)
-            # self.model.get_layer('Layer_K').weights[0].assign(self.K)
+            self.model.get_layer('Layer_K').weights[0].assign(self.K)
 
             # Two steps for training PsiNN
             self.history = self.train_psi(self.model, epochs=2)
@@ -249,5 +265,5 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
                         curr_lr = lr_decay_factor * self.model.optimizer.lr
                         self.model.optimizer.lr = curr_lr
 
-        # Compute final information
-        self.compute_final_info(reg_final=0.01)
+        # # Compute final information
+        # self.compute_final_info(reg_final=0.01)
