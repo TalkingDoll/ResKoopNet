@@ -35,6 +35,8 @@ conda env update --name koopman --file environment.yaml
 
 >solver_5: Assuming the eigenfunction in the denominator is normalized, the numerator $g^* M g$ is a quadratic form and is symmetric, so it's same as the operator norm.
 
+>solver_6: Modified version of solver3.
+
 - Inside kernel_resDMD,
 
 The entire code is modifed based on the package from https://github.com/MLDS-NUS/KoopmanDL
