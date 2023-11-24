@@ -159,7 +159,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         # s = tf.linalg.svd(M, compute_uv=False)
 
         # The spectral norm is the largest singular value
-        outputs = tf.reduce_max(s)
+        outputs = tf.reduce_max(s)**2 + self.reg*tf.reduce_sum(tf.abs(K))**2
 
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
         return model
