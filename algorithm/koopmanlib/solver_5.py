@@ -139,8 +139,8 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
         # A = tf.matmul(self.psi_x, self.psi_y, transpose_a=True)
         # L = tf.matmul(self.psi_y, self.psi_y, transpose_a=True)
         idmat = tf.eye(self.psi_x.shape[-1], dtype='float64')
-        xtx_inv = tf.linalg.pinv(self.reg * idmat + G)
-        K = tf.matmul(xtx_inv, A)
+        G_reg_inv = tf.linalg.pinv(self.reg * idmat + G)
+        K = tf.matmul(G_reg_inv, A)
 
         # # Compute the pseudoinverse of G
         # G_inv = tf.linalg.pinv(G)
@@ -152,7 +152,7 @@ class KoopmanDLSolver(KoopmanGeneralSolver):
 
       
         # Compute the product of G_inv and M
-        G_inv_M = tf.matmul(xtx_inv, M)
+        G_inv_M = tf.matmul(G_reg_inv, M)
 
         # Compute singular values
         s = tf.linalg.svd(G_inv_M, compute_uv=False)

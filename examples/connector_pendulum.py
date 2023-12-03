@@ -8,7 +8,7 @@ from algorithm.koopmanlib.dictionary import PsiNN
 data_path = r'D:\\resDMD_data' 
 import scipy.io
 # temp = scipy.io.loadmat(data_path+'pendulum_data.mat')
-temp = scipy.io.loadmat(data_path + '\\data_pendulum_1000_ui.mat')
+temp = scipy.io.loadmat(data_path + '\\data_pendulum_1000_i.mat')
 X = temp['DATA_X']
 Y = temp['DATA_Y']
 print(X.shape)
@@ -55,10 +55,6 @@ def connector_pendulum(n_psi_train, solver_index):
     Psi_X = solver.get_Psi_X().numpy()
     Psi_Y = solver.get_Psi_Y().numpy()
 
-    # SVD on Psi_X and Psi_Y
-    Psi_X_U, _, _ = np.linalg.svd(Psi_X/np.sqrt(Psi_X.shape[0]), full_matrices=False)
-    Psi_Y_U, _, _ = np.linalg.svd(Psi_Y/np.sqrt(Psi_Y.shape[0]), full_matrices=False)
-
     # Prepare data to save
     resDMD_DL_outputs = {
         'evalues': evalues,
@@ -66,14 +62,12 @@ def connector_pendulum(n_psi_train, solver_index):
         'N_dict': N_dict,
         'Psi_X': Psi_X,
         'Psi_Y': Psi_Y,
-        'Psi_X_U': Psi_X_U,
-        'Psi_Y_U': Psi_Y_U,
         'K': Koopman_matrix_K,
     }
 
     # Saving the file
     save_path = 'D:\\Residual-Dynamic-Mode-Decomposition-main\\Examples_gallery_1\\ResDMD_datasets\\basis_i'
-    filename = f'solver{solver_index}_outputs_{N_dict}basis_ui.mat'
+    filename = f'solver{solver_index}_outputs_{N_dict}basis_1000_i.mat'
     full_path = os.path.join(save_path, filename)
     scipy.io.savemat(full_path, resDMD_DL_outputs)
 
