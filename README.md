@@ -21,7 +21,7 @@ conda env update --name koopman --file environment.yaml
 
 5. Install the package Tensorflow:
 ```bash
-pip install tensorflow
+pip install tensorflow==2.8
 ```
 
 
