@@ -19,6 +19,17 @@ conda activate Koopman
 conda env update --name koopman --file environment.yaml
 ```
 
+5. Install the package Tensorflow:
+```bash
+pip show protobuf
+pip install --upgrade protobuf
+pip install protobuf==3.20.*
+
+pip install numpy
+pip install scipy
+pip install tensorflow
+```
+
 
 
 - Inside DNN_resDMD/examples, you can run several tests with only NN-resDMD. 
