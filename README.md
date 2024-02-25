@@ -35,7 +35,7 @@ pip install tensorflow==2.8
 
 ## Acknowledgements
 
-This project's codebase is significantly modified based on the [KoopmanDL package](https://github.com/MLDS-NUS/KoopmanDL) developed by MLDS-NUS. We extend our gratitude to the authors and contributors of KoopmanDL for their valuable work which served as a foundation for our project.
+This project's codebase is significantly modified based on the [KoopmanDL package](https://github.com/MLDS-NUS/KoopmanDL) developed by MLDS-NUS. We extend our gratitude to the authors and contributors of KoopmanDL for their valuable work.
 
 
 
