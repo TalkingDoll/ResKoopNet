@@ -33,6 +33,9 @@ pip install tensorflow==2.8
 >solver_resdmd: Directly optimize the eqn(4.6) defined in paper "Rigorous ...". In the script, we mutiply the eigenvector matrix in the loss function.
 
 
-The entire code is modifed based on the package from https://github.com/MLDS-NUS/KoopmanDL
+## Acknowledgements
+
+This project's codebase is significantly modified based on the [KoopmanDL package](https://github.com/MLDS-NUS/KoopmanDL) developed by MLDS-NUS. We extend our gratitude to the authors and contributors of KoopmanDL for their valuable work which served as a foundation for our project.
+
 
 
