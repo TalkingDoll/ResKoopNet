@@ -1,5 +1,5 @@
 # DNN-resDMD
-In this project, we will compare DNN-resDMD and kernel-resDMD.
+In this project, we will compare NN-ResDMD and other methods such as Hankle-DMD and EDMD-DL.
 
 - Install the environment:
 
@@ -21,23 +21,12 @@ conda env update --name koopman --file environment.yaml
 
 
 
-- Inside DNN_resDMD/examples, you can run several tests with only DNN-resDMD. The followings are different solver scripts defining the loss function in different ways:
+- Inside DNN_resDMD/examples, you can run several tests with only NN-resDMD. 
 
->solver_0: original EDMD-DL
+>solver_edmd: original EDMD-DL
 
->solver_1: Directly optimize the loss function which is defined as eqn(3.2) defined in paper "Residual dynamic mode decomposition: robust and verified Koopmanism" or (4.6) in "Rigorous data-driven computation of spectral properties of Koopman operators for dynamical systems"(More stable)
+>solver_resdmd: Directly optimize the eqn(4.6) defined in paper "Rigorous ...". In the script, we mutiply the eigenvector matrix in the loss function.
 
->solver_2: Multiply eigenvector matrix using manually defined matrices $G$, $A$ and $K$
-
->solver_3: Mutiply the eigenvector matrix using the default 'Layer_K'
-
->solver_4: $J_i(K, \Psi) = \mathbf{g_i^*}\left( L - K^*A - A^*K + K^*GK +\mu K^*K \right)\mathbf{g_i}$, which is eqn(1) in scratch paper(Not bad)
-
->solver_5: Assuming the eigenfunction in the denominator is normalized, the numerator $g^* M g$ is a quadratic form and is symmetric, so it's same as the operator norm.
-
->solver_6: Modified version of solver3.
-
-- Inside kernel_resDMD,
 
 The entire code is modifed based on the package from https://github.com/MLDS-NUS/KoopmanDL
 
