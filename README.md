@@ -19,7 +19,7 @@ conda activate Koopman
 conda env update --name koopman --file environment.yaml
 ```
 
-5. Install the package Tensorflow:
+5. Install the package Tensorflow 2.8:
 ```bash
 pip install tensorflow==2.8
 ```
