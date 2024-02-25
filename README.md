@@ -1,4 +1,4 @@
-# DNN-resDMD
+# NN-ResDMD
 In this project, we will compare NN-ResDMD and other methods such as Hankle-DMD and EDMD-DL.
 
 - Install the environment:
