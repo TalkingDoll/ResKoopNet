@@ -14,33 +14,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.keras.backend.set_floatx('float64')
 
 
-class AbstractDictionary(object):
-    """
-    A base class for dictionary generation.
-
-    Attributes:
-        basis_func_number (int): The number of basis functions.
-        B (numpy.ndarray): The B matrix.
-    """
-
-    def generate_B(self, inputs):
-        """
-        Generates the B matrix based on the inputs.
-
-        Args:
-            inputs (numpy.ndarray): The input array.
-
-        Returns:
-            numpy.ndarray: The generated B matrix.
-        """
-        target_dim = inputs.shape[-1]
-        self.basis_func_number = self.n_psi_train + target_dim + 1
-        # Form B matrix
-        self.B = np.zeros((self.basis_func_number, target_dim))
-        for i in range(0, target_dim):
-            self.B[i + 1][i] = 1
-        return self.B
-
 class KoopmanNN(tf.keras.layers.Layer):
     def __init__(self, layer_sizes=[64, 64], n_psi_train=22, **kwargs):
         super(KoopmanNN, self).__init__(**kwargs)
