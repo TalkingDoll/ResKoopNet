@@ -155,6 +155,9 @@ class KoopmanSolver(object):
     def compute_K(self, dic, data_x, data_y, reg):
         psi_x = dic(data_x)
         psi_y = dic(data_y)
+        # Compute Psi_X and Psi_Y
+        self.Psi_X = dic(data_x)
+        self.Psi_Y = dic(data_y)
         psi_xt = tf.transpose(psi_x)
         idmat = tf.eye(psi_x.shape[-1], dtype='float64')
         xtx_inv = tf.linalg.pinv(reg * idmat + tf.matmul(psi_xt, psi_x))
