@@ -162,7 +162,11 @@ class KoopmanSolver(object):
         self.K_reg = tf.matmul(xtx_inv, xty)
         return self.K_reg
 
+    def get_Psi_X(self):
+        return self.Psi_X
 
+    def get_Psi_Y(self):
+        return self.Psi_Y
 
 
     '''
