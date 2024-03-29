@@ -18,7 +18,7 @@ class KoopmanNN(tf.keras.layers.Layer):
     def __init__(self, layer_sizes=[64, 64], n_psi_train=22, **kwargs):
         super(KoopmanNN, self).__init__(**kwargs)
         self.layer_sizes = layer_sizes
-        self.n_psi_train = n_psi_train  # Using n_psi_train directly, consistent with DicNN
+        self.n_psi_train = n_psi_train  # Using n_psi_train directly
         self.input_layer = tf.keras.layers.Dense(layer_sizes[0], use_bias=False)
         self.hidden_layers = [tf.keras.layers.Dense(size, activation='tanh') for size in layer_sizes]
         self.output_layer = tf.keras.layers.Dense(n_psi_train)
@@ -29,7 +29,7 @@ class KoopmanNN(tf.keras.layers.Layer):
             x = layer(x)
         psi_x_train = self.output_layer(x)
         
-        # Directly integrating the generation of the constant and concatenation as done in PsiNN
+        # Directly integrating the generation of the constant and concatenation
         constant = tf.ones_like(inputs[:, :1])
         outputs = tf.keras.layers.Concatenate()([constant, inputs, psi_x_train])
         return outputs
