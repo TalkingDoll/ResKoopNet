@@ -195,7 +195,7 @@ class KoopmanSolver(object):
         psi_next = Layer_K(self.psi_x)
 
         # Subtract and cast to complex for multiplication with eigenvectors
-        psi_diff = tf.cast(psi_next - self.psi_y, tf.complex128)
+        psi_diff = tf.cast(psi_next - self.psi_y, tf.complex64)
         outputs = tf.matmul(psi_diff, self.eigenvectors)
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
         return model
