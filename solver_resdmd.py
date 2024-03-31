@@ -335,5 +335,5 @@ class KoopmanSolver(object):
                         curr_lr = lr_decay_factor * self.model.optimizer.lr
                         self.model.optimizer.lr = curr_lr
 
-        # Compute final information
-        self.compute_final_info(reg_final=0.01)
+        # # Compute final information
+        # self.compute_final_info(reg_final=0.01)
