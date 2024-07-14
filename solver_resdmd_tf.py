@@ -2,6 +2,7 @@ import os
 
 # from autograd import jacobian, hessian
 import tensorflow as tf
+
 from tensorflow.keras.layers import Dense, Layer, Concatenate, Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -9,16 +10,24 @@ from tensorflow.python.ops.numpy_ops import np_config
 
 import numpy as np
 
+import warnings 
+# Settings the warnings to be ignored 
+warnings.filterwarnings('ignore') 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.keras.backend.set_floatx('float64')
 
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # 假设您想使用第一个 GPU
+
+import tensorflow as tf
+print(tf.config.list_physical_devices('GPU'))
 
 class KoopmanNN(tf.keras.layers.Layer):
     def __init__(self, layer_sizes=[64, 64], n_psi_train=22, **kwargs):
         super(KoopmanNN, self).__init__(**kwargs)
         self.layer_sizes = layer_sizes
-        self.n_psi_train = n_psi_train  # Using n_psi_train directly
+        self.n_psi_train = n_psi_train  # Using n_psi_train directly, consistent with DicNN
         self.input_layer = tf.keras.layers.Dense(layer_sizes[0], use_bias=False)
         self.hidden_layers = [tf.keras.layers.Dense(size, activation='tanh') for size in layer_sizes]
         self.output_layer = tf.keras.layers.Dense(n_psi_train)
@@ -29,7 +38,7 @@ class KoopmanNN(tf.keras.layers.Layer):
             x = layer(x)
         psi_x_train = self.output_layer(x)
         
-        # Directly integrating the generation of the constant and concatenation
+        # Directly integrating the generation of the constant and concatenation as done in PsiNN
         constant = tf.ones_like(inputs[:, :1])
         outputs = tf.keras.layers.Concatenate()([constant, inputs, psi_x_train])
         return outputs
@@ -194,7 +203,9 @@ class KoopmanSolver(object):
                         trainable=False)
         psi_next = Layer_K(self.psi_x)
 
-        outputs = psi_next - self.psi_y
+        # Subtract and cast to complex for multiplication with eigenvectors
+        psi_diff = tf.cast(psi_next - self.psi_y, tf.complex64)
+        outputs = tf.matmul(psi_diff, self.eigenvectors)
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
         return model
 
@@ -300,6 +311,9 @@ class KoopmanSolver(object):
             self.dic_func(self.data_valid[1]))
         self.batch_size = batch_size
 
+        # Ensure the final information is computed before building the model
+        self.compute_final_info(reg_final=0.01)
+        
         # Build the Koopman DL model
         self.model = self.build_model()
 
@@ -330,5 +344,5 @@ class KoopmanSolver(object):
                         curr_lr = lr_decay_factor * self.model.optimizer.lr
                         self.model.optimizer.lr = curr_lr
 
-        # Compute final information
-        self.compute_final_info(reg_final=0.01)
+        # # Compute final information
+        # self.compute_final_info(reg_final=0.01)
