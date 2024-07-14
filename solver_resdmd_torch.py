@@ -15,9 +15,8 @@ warnings.filterwarnings('ignore')
 
 device = 'cuda'
 torch.set_default_dtype(torch.float64)
- 
-class KoopmanNNTorch(nn.Module):
 
+class KoopmanNNTorch(nn.Module):
     def __init__(self, input_size, layer_sizes=[64, 64], n_psi_train=22, **kwargs):
         super(KoopmanNNTorch, self).__init__()
         self.layer_sizes = layer_sizes
@@ -73,11 +72,10 @@ class KoopmanModelTorch(nn.Module):
         psi_y= torch.tensor(psi_y, dtype= torch.complex128)
         psi_x_v= self.layer_eig(psi_x)
         psi_y_v= self.layer_eig(psi_y)
-        #psi_x_v_lambda= self.layer_lambda_diag(psi_x_v)
-        psi_x_v_K= self.layer_K(psi_x_v)
+        psi_x_v_lambda= self.layer_lambda_diag(psi_x_v)
         
         #psi_next = self.layer_K(psi_x)
-        outputs_complex =psi_y_v- psi_x_v_K
+        outputs_complex =psi_y_v- psi_x_v_lambda
         outputs= torch.cat ([outputs_complex.real, outputs_complex.imag], dim=1)
         return outputs
 
@@ -88,10 +86,8 @@ def fit_koopman_model(koopman_model, koopman_optimizer, checkpoint_file, xx_trai
     yy_train_tensor = torch.DoubleTensor(float64(yy_train)).to(device)
     xx_test_tensor = torch.DoubleTensor(float64(xx_test)).to(device)
     yy_test_tensor = torch.DoubleTensor(float64(yy_test)).to(device)
-
     train_dataset = torch.utils.data.TensorDataset(xx_train_tensor, yy_train_tensor)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
-
     val_dataset = torch.utils.data.TensorDataset(xx_test_tensor, yy_test_tensor)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
@@ -115,7 +111,7 @@ def fit_koopman_model(koopman_model, koopman_optimizer, checkpoint_file, xx_trai
             output = mlp_mdl(data, target)
             zeros_tensor = torch.zeros_like(output)
             loss = criterion(output, zeros_tensor)
-            #loss =complex_mse_loss(output, zeros_tensor)
+            
             loss.backward()
             optimizer.step()
             train_loss += loss.item() * data.size(0)
@@ -127,14 +123,12 @@ def fit_koopman_model(koopman_model, koopman_optimizer, checkpoint_file, xx_trai
                 output_val = mlp_mdl(data, target)
                 zeros_tensor = torch.zeros_like(output_val)
                 loss = criterion(output_val, zeros_tensor)
-                #loss = complex_mse_loss(output_val, zeros_tensor)
+
                 val_loss += loss.item() * data.size(0)
         val_loss = val_loss / len(val_loader.dataset)
         val_loss_list.append(val_loss)
-
         print('Epoch: {} \tTraining Loss: {:.6f} val loss: {:.6f}'.format(
             epoch + 1, train_loss, val_loss))
-
         if val_loss < best_loss:
             print('saving, val loss enhanced:', val_loss, best_loss)
             #torch.save(mlp_mdl.state_dict(), checkpoint_file)
@@ -319,7 +313,7 @@ class KoopmanSolverTorch(object):
             self.K = self.compute_K(self.dic_func, self.data_x_train, self.data_y_train, self.reg)
             self.compute_final_info(reg_final=0.01)
             with torch.no_grad():
-                self.koopman_model.layer_K.weight.data = torch.tensor(self.K, dtype= torch.complex128).to(device)
+                self.koopman_model.layer_K.weight.data = self.K
                 self.koopman_model.layer_eig.weight.data= torch.tensor(self.eigenvectors, dtype= torch.complex128).to(device)
                 self.koopman_model.layer_lambda_diag.weight.data = torch.tensor(np.diag(self.eigenvalues), dtype= torch.complex128).to(device)
                
@@ -343,7 +337,6 @@ class KoopmanSolverTorch(object):
             print(f"Epoch {ii+1} time: {epoch_time:.2f} seconds")
 
         # Compute final information
-        #self.koopman_model.load_state_dict(torch.load(self.checkpoint_file))
         checkpoint = torch.load(self.checkpoint_file)
         self.koopman_model.load_state_dict(checkpoint['model_state_dict'])
         self.koopman_optimizer.load_state_dict(checkpoint['optimizer_state_dict'])

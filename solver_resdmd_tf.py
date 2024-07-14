@@ -2,7 +2,6 @@ import os
 
 # from autograd import jacobian, hessian
 import tensorflow as tf
-
 from tensorflow.keras.layers import Dense, Layer, Concatenate, Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -10,18 +9,9 @@ from tensorflow.python.ops.numpy_ops import np_config
 
 import numpy as np
 
-import warnings 
-# Settings the warnings to be ignored 
-warnings.filterwarnings('ignore') 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.keras.backend.set_floatx('float64')
-
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # 假设您想使用第一个 GPU
-
-import tensorflow as tf
-print(tf.config.list_physical_devices('GPU'))
 
 class KoopmanNN(tf.keras.layers.Layer):
     def __init__(self, layer_sizes=[64, 64], n_psi_train=22, **kwargs):
@@ -188,8 +178,7 @@ class KoopmanSolver(object):
     def build_model(self):
         """Build model with trainable dictionary
 
-        The loss function is ||Psi(y) - K Psi(x)||^2 .
-
+        The loss function is ||Psi_Y * V - Psi_X * V * Lambda||^2.
         """
         inputs_x = Input((self.target_dim,))
         inputs_y = Input((self.target_dim,))
@@ -197,17 +186,39 @@ class KoopmanSolver(object):
         self.psi_x = self.dic_func(inputs_x)
         self.psi_y = self.dic_func(inputs_y)
 
+        # Convert psi_x and psi_y to complex128
+        self.psi_x = tf.cast(self.psi_x, dtype=tf.complex128)
+        self.psi_y = tf.cast(self.psi_y, dtype=tf.complex128)
+
         Layer_K = Dense(units=self.psi_y.shape[-1],
                         use_bias=False,
                         name='Layer_K',
                         trainable=False)
         psi_next = Layer_K(self.psi_x)
 
-        # Subtract and cast to complex for multiplication with eigenvectors
-        psi_diff = tf.cast(psi_next - self.psi_y, tf.complex64)
-        outputs = tf.matmul(psi_diff, self.eigenvectors)
+        # Compute Psi_X * V
+        psi_x_v = tf.matmul(self.psi_x, self.eigenvectors)
+        
+        # Compute Psi_Y * V
+        psi_y_v = tf.matmul(self.psi_y, self.eigenvectors)
+        
+        # Create Lambda matrix as a diagonal matrix
+        lambda_diag = tf.linalg.diag(self.eigenvalues)
+
+        # Compute Psi_X * V * Lambda
+        psi_x_v_lambda = tf.matmul(psi_x_v, lambda_diag)
+
+        # Compute the difference Psi_Y * V - Psi_X * V * Lambda
+        psi_diff = psi_y_v - psi_x_v_lambda
+        
+        # The new outputs
+        outputs = psi_diff
+        
         model = Model(inputs=[inputs_x, inputs_y], outputs=outputs)
         return model
+
+
+
 
     def train_psi(self, model, epochs):
         """Train the trainable part of the dictionary
@@ -269,46 +280,14 @@ class KoopmanSolver(object):
         # return (outputs, first_derivatives, second_derivatives)
         return (first_derivatives, second_derivatives)
 
-    def build(
-            self,
-            data_train,
-            data_valid,
-            epochs,
-            batch_size,
-            lr,
-            log_interval,
-            lr_decay_factor):
-        """Train Koopman model and calculate the final information,
-        such as eigenfunctions, eigenvalues and K.
-        For each outer training epoch, the koopman dictionary is trained
-        by several times (inner training epochs), and then compute matrix K.
-        Iterate the outer training.
-
-        :param data_train: training data
-        :type data_train: [data at the current time, data at the next time]
-        :param data_valid: validation data
-        :type data_valid: [data at the current time, data at the next time]
-        :param epochs: the number of the outer epochs
-        :type epochs: int
-        :param batch_size: batch size
-        :type batch_size: int
-        :param lr: learning rate
-        :type lr: float
-        :param log_interval: the patience of learning decay
-        :type log_interval: int
-        :param lr_decay_factor: the ratio of learning decay
-        :type lr_decay_factor: float
-        """
+    def build(self, data_train, data_valid, epochs, batch_size, lr, log_interval, lr_decay_factor):
         # Separate training data
         self.data_train = data_train
-        self.data_x_train, self.data_y_train = self.separate_data(
-            self.data_train)
+        self.data_x_train, self.data_y_train = self.separate_data(self.data_train)
 
         self.data_valid = data_valid
-        self.zeros_data_y_train = tf.zeros_like(
-            self.dic_func(self.data_y_train))
-        self.zeros_data_y_valid = tf.zeros_like(
-            self.dic_func(self.data_valid[1]))
+        self.zeros_data_y_train = tf.cast(tf.zeros_like(self.dic_func(self.data_y_train)), tf.complex128)
+        self.zeros_data_y_valid = tf.cast(tf.zeros_like(self.dic_func(self.data_valid[1])), tf.complex128)
         self.batch_size = batch_size
 
         # Ensure the final information is computed before building the model
@@ -319,7 +298,8 @@ class KoopmanSolver(object):
 
         # Compile the Koopman DL model
         opt = Adam(lr)
-        self.model.compile(optimizer=opt, loss='mse')
+        self.model.compile(optimizer=opt, loss=self.complex_mse)
+
         # Training Loop
         losses = []
         for i in range(epochs):
@@ -329,8 +309,10 @@ class KoopmanSolver(object):
                                     self.data_x_train,
                                     self.data_y_train,
                                     self.reg)
-            self.model.get_layer('Layer_K').weights[0].assign(self.K)
-
+            
+            # Update eigenvalues and eigenvectors
+            self.eig_decomp(self.K)
+            
             # Two steps for training PsiNN
             self.history = self.train_psi(self.model, epochs=2)
 
@@ -344,5 +326,11 @@ class KoopmanSolver(object):
                         curr_lr = lr_decay_factor * self.model.optimizer.lr
                         self.model.optimizer.lr = curr_lr
 
-        # # Compute final information
-        # self.compute_final_info(reg_final=0.01)
+        # Compute final information
+        self.compute_final_info(reg_final=0.01)
+
+    def complex_mse(self, y_true, y_pred):
+        # Cast both inputs to complex128
+        y_true = tf.cast(y_true, tf.complex128)
+        y_pred = tf.cast(y_pred, tf.complex128)
+        return tf.reduce_mean(tf.abs(y_true - y_pred)**2)
