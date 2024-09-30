@@ -70,4 +70,4 @@ end
 
 
 %%
-save('D:\new_data_June\data_pendulum_240.mat', 'DATA_X', 'DATA_Y');
+save('D:\data\data_pendulum_240.mat', 'DATA_X', 'DATA_Y');
