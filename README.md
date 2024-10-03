@@ -14,8 +14,8 @@ The `pendulum.m` file is used to generate pendulum data.
 
 I have provided two versions of experiments:
 
-1. **TensorFlow Version**: `pendulum_test_tf`
-2. **PyTorch Version**: `pendulum_test_torch`
+1. **TensorFlow Version**: `pendulum_nnresdmd_tf`
+2. **PyTorch Version**: `pendulum_nnresdmd_torch`
 
 ### Solvers
 
