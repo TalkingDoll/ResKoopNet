@@ -19,7 +19,8 @@ I have provided two versions of experiments:
 
 ### Solvers
 
-The TensorFlow version of the solver is based on a modified version of the EDMD-DL solver. You can find more details [here](https://github.com/MLDS-NUS/KoopmanDL?tab=readme-ov-file).
+1. The **solver_edmd_tf.py** is based on a modified version of the EDMD-DL solver. You can find more details [here](https://github.com/MLDS-NUS/KoopmanDL?tab=readme-ov-file).
+2. **solver_resdmd_tf.py** and **solver_resdmd_torch.py** are also modified based on the EDMD-DL solver.
 
 ### Plotting Tools
 
