@@ -41,28 +41,28 @@ def exact_dmd(gtot, thrshhld, window, ndsets):
     gm = np.zeros((nrws, ndsets * (window - 1)), dtype=np.float64)
     gp = np.zeros((nrws, ndsets * (window - 1)), dtype=np.float64)
     
-    # Hankel matrix构建
+    # Hankel matrix construction
     for ll in range(ndsets):
         gm[:, ll * (window - 1):(ll + 1) * (window - 1)] = gtot[:, ll * window:(ll + 1) * window - 1]
         gp[:, ll * (window - 1):(ll + 1) * (window - 1)] = gtot[:, 1 + ll * window:(ll + 1) * window]
 
-    # 对 gm 进行SVD
+    # Apply SVD on gm 
     u, s, vh = np.linalg.svd(gm, full_matrices=False)
     
-    # 根据阈值选择重要的奇异值
+    # Select singular value based on threshold
     sm = np.max(s)
-    indskp = np.log10(s / sm) > -thrshhld  # 保留的索引
+    indskp = np.log10(s / sm) > -thrshhld  # preserved index
     sr = s[indskp]
     ur = u[:, indskp]
     v = np.conj(vh.T)
     vr = v[:, indskp]
 
-    # 计算Koopman矩阵
-    kmat = gp @ vr @ np.diag(1. / sr) @ np.conj(ur.T)  # Koopman矩阵
-    evals, evecs = np.linalg.eig(kmat)  # 计算特征值和特征向量
+    # Compute Koopman matrix
+    kmat = gp @ vr @ np.diag(1. / sr) @ np.conj(ur.T)  # Koopman matrix
+    evals, evecs = np.linalg.eig(kmat)  # Compute eigenvalue and eigenvector
     
-    # 计算Koopman模态
-    koopman_modes = ur @ evecs  # 直接计算Koopman模态
+    # Compute Koopman mode
+    koopman_modes = ur @ evecs  # Compute Koopman mode
 
     return evals, evecs, koopman_modes, kmat
 
@@ -98,8 +98,8 @@ def hankel_matrix(tseries, window):
 #     return exact_dmd(hankel_mats, thrshhld, window, n_traj)
 def hankel_dmd(raw_data, n_traj, traj_len, window, thrshhld):
     NT = traj_len
-    nclmns = NT - (window - 1)  # 时间延迟的数量
-    nobs = raw_data.shape[1]  # 观测的数量
+    nclmns = NT - (window - 1)  # number of time delays
+    nobs = raw_data.shape[1]  # number of observables
     hankel_mats = np.zeros((nclmns * nobs, window * n_traj), dtype=np.float64)
     
     for ll in range(n_traj):
@@ -110,7 +110,7 @@ def hankel_dmd(raw_data, n_traj, traj_len, window, thrshhld):
                 usclfac = sclfac
             hankel_mats[jj * nclmns:(jj + 1) * nclmns, ll * window:(ll + 1) * window] = usclfac / sclfac * hmat
 
-    # 调用exact_dmd来计算Koopman模态和矩阵
+    # Recall exact_dmd to compute Koopman mode and matrix
     return exact_dmd(hankel_mats, thrshhld, window, n_traj)
 
 
