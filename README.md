@@ -29,9 +29,21 @@ We have computed Koopman modes using ResKoopNet and Hankel-DMD in these experime
 
 1. `koopman_pseudospec_qr` - A plotting tool to visualize the pseudospectrum. This Python file is translated from [here](https://github.com/MColbrook/Residual-Dynamic-Mode-Decomposition/blob/main/main_routines/KoopPseudoSpecQR.m).
 
+## References
 
-##
+If you use ResKoopNet or the code in your research, please cite the following paper:
 
+```bibtex
+@misc{xu2025reskoopnetlearningkoopmanrepresentations,
+      title={ResKoopNet: Learning Koopman Representations for Complex Dynamics with Spectral Residuals}, 
+      author={Yuanchao Xu and Kaidi Shao and Nikos Logothetis and Zhongwei Shen},
+      year={2025},
+      eprint={2501.00701},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2501.00701}, 
+}
+```
 
 ---
 
