@@ -6,19 +6,24 @@
 
 I have provided two versions of Pendulum system using ResKoopNet and a comparison test with other 4 methods:
 
-1. The `pendulum.m` file is used to generate pendulum data.
-2. **TensorFlow Version**: `pendulum_reskoopnet_tf.ipynb`
-3. **PyTorch Version**: `pendulum_reskoopnet_torch.ipynb`
-4. Comparison test: `pendulum_edmd_reskoopnet_hankeldmd_edmddl.ipynb`
-5. Algorithm of Hankel-DMD: `hankel_dmd_utils.py`
+1. The `pendulum.m` file is used to generate pendulum data,
+2. **TensorFlow Version**: `pendulum_reskoopnet_tf.ipynb`,
+3. **PyTorch Version**: `pendulum_reskoopnet_torch.ipynb`,
+4. Comparison test: `pendulum_edmd_reskoopnet_hankeldmd_edmddl.ipynb`,
+5. Algorithm of Hankel-DMD: `hankel_dmd_utils.py`.
 
 ## Experiments 2: Turbulence
 
 We have computed Koopman modes using ResKoopNet and Hankel-DMD in these experiments:
 
-1. Experiment on turbulence using ResKoopNet: `turbulence_reskoopnet.ipynb`
-2. Plotting Koopman modes computed from ResKoopNet method: `turbulence_reskoopnet_plot.ipynb`
-3. Experiment on turbulence using ResKoopNet with plotting: `turbulence_hankeldmd.ipynb`
+1. Experiment on turbulence using ResKoopNet: `turbulence_reskoopnet.ipynb`,
+2. Plotting Koopman modes computed from ResKoopNet method: `turbulence_reskoopnet_plot.ipynb`,
+3. Experiment on turbulence using ResKoopNet with plotting: `turbulence_hankeldmd.ipynb`.
+
+## Experiments 3: Neural dynamics identification in mice visual cortex
+
+We have tested on the open dataset on mice from the competition ``Sensorium 2023" via comparing ResKoopNet and several other classical methods in this experiment.
+
 
 ## Solvers
 
