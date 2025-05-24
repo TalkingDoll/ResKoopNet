@@ -1,4 +1,4 @@
-# ResKoopNet instructions
+# ResKoopNet
 
 ---
 
