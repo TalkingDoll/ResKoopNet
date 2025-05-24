@@ -36,7 +36,7 @@ We have tested on the open dataset on mice from the competition ``Sensorium 2023
 
 ## References
 
-If you use ResKoopNet or the code in your research, please cite the following paper:
+If you use ResKoopNet or the code in your research, please kindly cite the following paper:
 
 ```bibtex
 @misc{xu2025reskoopnetlearningkoopmanrepresentations,
