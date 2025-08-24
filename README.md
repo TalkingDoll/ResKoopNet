@@ -39,14 +39,14 @@ We have tested on the open dataset on mice from the competition ``Sensorium 2023
 If you use ResKoopNet or the code in your research, please kindly cite the following paper:
 
 ```bibtex
-@misc{xu2025reskoopnetlearningkoopmanrepresentations,
-      title={ResKoopNet: Learning Koopman Representations for Complex Dynamics with Spectral Residuals}, 
-      author={Yuanchao Xu and Kaidi Shao and Nikos Logothetis and Zhongwei Shen},
-      year={2025},
-      eprint={2501.00701},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2501.00701}, 
+@@inproceedings{xu2025reskoopnet,
+  title     = {ResKoopNet: Learning Koopman Representations for Complex Dynamics with Spectral Residuals},
+  author    = {Xu, Yuanchao and Shao, Kaidi and Logothetis, Nikos and Shen, Zhongwei},
+  booktitle = {Proceedings of the 42nd International Conference on Machine Learning},
+  year      = {2025},
+  publisher = {PMLR},
+  series    = {ICML '25},
+  url       = {https://openreview.net/forum?id=Svk7jjhlSu}
 }
 ```
 
